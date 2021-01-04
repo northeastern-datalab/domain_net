@@ -1,0 +1,9 @@
+decorator==4.4.2
+joblib==1.0.0
+networkx==2.5
+numpy==1.19.4
+pandas==1.2.0
+python-dateutil==2.8.1
+pytz==2020.5
+six==1.15.0
+tqdm==4.55.1
