@@ -7,6 +7,8 @@
 /DATA/
 
 # Ignores for network analysis
+network_analysis/figures/
+network_analysis/output/
 
 # Ignores for homograph injection
 homograph_injection/metadata

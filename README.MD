@@ -22,3 +22,16 @@
    pip install -r requirements.txt
    ```
 We recommend using python version 3.8.
+
+
+## Reproducibility
+
+### Synthetic Benchmark (SB)
+To reproduce our results and analysis on the synthetic benchmark run the `synthetic_benchmark.sh` script.
+You can do that by running:
+```
+chmod +x synthetic_benchmark.sh && ./synthetic_benchmark.sh
+```
+
+The script will produce the bipartite graph representation for the synthetic benchmark and then calculate the BC scores for every node in that graph.
+Finally open and run all cells in the [synthetic_benchmark_analysis.ipynb](network_analysis/synthetic_benchmark_analysis.ipynb) jupyter notebook file to see the top-k figures.

@@ -21,7 +21,17 @@ python main.py \
 ```
 The above command line will construct the bipartite graph representation for the synthetic benchmark which can be found in the `combined_graphs_output/synthetic_example_bipartite/` directory.
 
-### Example 2: Construct the bipartite graph representation for the Table Union Search (TUS) benchmark
+### Example 2: Construct the cell-values-only graph representation for the Synthetic Benchmark (SB)
+```
+python main.py \
+-id ../DATA/synthetic_benchmark/ \
+-od combined_graphs_output/synthetic_benchmark_cell_values_only/ \
+--input_data_file_type csv \
+--graph_type cell_values_only
+```
+The above command line will construct the cell-values-only graph representation for the synthetic benchmark which can be found in the `combined_graphs_output/synthetic_example_cell_values_only/` directory.
+
+### Example 3: Construct the bipartite graph representation for the Table Union Search (TUS) benchmark
 ```
 python main.py \
 -id ../DATA/table_union_search/csvfiles/ \
@@ -31,7 +41,7 @@ python main.py \
 ```
 The above command line will construct the bipartite graph representation for the TUS benchmark which can be found in the `combined_graphs_output/TUS/` directory.
 
-### Example 3: Construct the bipartite graph representation for the Table Union Search Injected (TUS-I) benchmark
+### Example 4: Construct the bipartite graph representation for the Table Union Search Injected (TUS-I) benchmark
 ```
 python main.py \
 -id ../DATA/table_union_search/csvfiles_no_homographs/ \
