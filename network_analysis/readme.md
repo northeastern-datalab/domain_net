@@ -22,3 +22,12 @@ python main.py \
 ```
 The above command calculated the BC scores for every node in the graph representation of the synthetic benchmark.
 Once the script finishes running a pandas dataframe is saved in the specified output directory with the BC score for each node.
+
+### Example 2: Calculate Approximate BC scores for every node in the TUS benchmark by sampling 5000 nodes
+```
+python main.py \
+-g ../graph_construction/combined_graphs_output/TUS/bipartite/bipartite.graph \
+-o output/TUS/ \
+--betweenness_mode approximate \
+--num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle
+```

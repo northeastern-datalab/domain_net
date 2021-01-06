@@ -34,4 +34,15 @@ chmod +x synthetic_benchmark.sh && ./synthetic_benchmark.sh
 ```
 
 The script will produce the bipartite graph representation for the synthetic benchmark and then calculate the BC scores for every node in that graph.
-Finally open and run all cells in the [synthetic_benchmark_analysis.ipynb](network_analysis/synthetic_benchmark_analysis.ipynb) jupyter notebook file to see the top-k figures.
+Finally open and run all cells in the [synthetic_benchmark_analysis.ipynb](network_analysis/synthetic_benchmark_analysis.ipynb) jupyter notebook file to see the analysis and produced figures.
+
+### Table Union Search (TUS) Benchmark
+To reproduce our results and analysis on the table union search (TUS) benchmark run the `TUS_benchmark.sh` script.
+You can do that by running:
+```
+chmod +x TUS_benchmark.sh && ./TUS_benchmark.sh
+```
+
+The script will produce the bipartite graph representation for the synthetic benchmark and then calculate the approximate BC scores for every node in that graph.
+5000 nodes are used for sampling.
+Finally the precision/recall/f1-score curves at various top-k values will be produced and can be found in the [network_analysis/figures/TUS/](network_analysis/figures/TUS/) directory.
