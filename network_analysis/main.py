@@ -248,10 +248,6 @@ def main(args):
 
         # Updated and save the dataframe: graph_stats_df 
         graph_stats_df.to_pickle(args.output_dir + 'graph_stats_df.pickle')
-    
-    if args.groundtruth_path != None:
-        # Perform Evaluation if ground truth was provided
-        utils.topk_evaluation.top_k_graphs(graph_stats_df, args.output_dir)
 
 
 if __name__ == "__main__":

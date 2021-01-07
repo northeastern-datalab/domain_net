@@ -31,3 +31,12 @@ python main.py \
 --betweenness_mode approximate \
 --num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle
 ```
+
+### Example 3: Calculate Approximate BC scores for every node in the TUS benchmark with no homographs by sampling 5000 nodes
+```
+python main.py \
+-g ../graph_construction/combined_graphs_output/TUS_no_homographs/bipartite/bipartite.graph \
+-o output/TUS_no_homographs/ \
+--betweenness_mode approximate \
+--num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle
+```
