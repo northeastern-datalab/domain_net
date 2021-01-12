@@ -61,3 +61,27 @@ The injected datasets can be found in the `DATA/table_union_search/TUS_injected_
 
 Once the dataset generation is complete, a bipartite graph representation is generated for each dataset and then the approximate BC scores are computed for all nodes.
 The analysis, evaluation and relevant figures of the experiment can be found by running all the cells in the [homograph_injection_analysis.ipynb](network_analysis/homograph_injection_analysis.ipynb) jupyter notebook.
+
+### BC approximation scalability Experiments
+To run the BC approximation scalability experiments run the `BC_approximation_scalability.sh` script.
+You can do that by running:
+```
+chmod +x BC_approximation_scalability.sh && ./BC_approximation_scalability.sh
+```
+
+The script will run approximate BC with different sample sizes on the synthetic benchmark (SB) and the TUS benchmark.
+Once the script is finished, you can see the results and evaluation of the approximation by running all the cells in the [betweenness_approximation.ipynb](network_analysis/betweenness_approximation.ipynb) jupyter notebook.
+
+## How to use with your own data
+Domain Net follows a two step process where (1) converts a set of tables into a graph representation and (2) using the constructed graph calculates the betweenness centrality (BC) of every data value in that graph.
+
+* **Graph Construction** is handled by the [graph_construction/](graph_construction/) module.
+Given a set of csv or tsv files in a specified directory a bipartite graph representation is constructed.
+The first row in the csv or tsv files is considered as a header row and its values are not considered as data values.
+If you know that your data has no header rows then inject an artificial dummy row as the first row of your data to act as a header.
+To construct the bipartite graph representation follow the instructions and examples in the graph_construction/ [readme](graph_construction/readme.md)
+
+* **BC computation** is handled by the [network_analysis/](network_analysis/) module.
+Given the graph representation as input from the previous step it will calculate the BC scores for each data value node in the graph.
+Nodes with higher BC scores are more likely to be homographs than data values with lower BC scores.
+To calculate the BC scores and set if an exact or approximate computation needs to be run follow the instructions and examples in the network_analysis/ [readme](network_analysis/readme.md).  
