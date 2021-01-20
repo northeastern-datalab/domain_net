@@ -24,6 +24,13 @@
    ```
 We recommend using python version 3.8.
 
+If there are issues when installing the networkit package make sure you have installed g++ and python3-dev on your machine.
+On Ubuntu this can be done with the following commands:
+```
+sudo apt-get install python3-dev 
+sudo apt install g++
+```
+
 
 ## Reproducibility
 
