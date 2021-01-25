@@ -13,23 +13,31 @@
 1. Clone the repo
 2. CD to the repo directory. Create and activate a virtual environment for this project  
   * On macOS or Linux:
-   ```
-   python3 -m venv env
-   source env/bin/activate
-   which python
-   ```
+      ```
+      python3 -m venv env
+      source env/bin/activate
+      which python
+      ```
 3. Install necessary packages
    ```
    pip install -r requirements.txt
    ```
 We recommend using python version 3.8.
 
-If there are issues when installing the networkit package make sure you have installed g++ and python3-dev on your machine.
-On Ubuntu this can be done with the following commands:
-```
-sudo apt-get install python3-dev 
-sudo apt install g++
-```
+4. In addition to the above packages you will need to install a modified version of the [networkit](https://github.com/networkit/networkit) package.
+This modified version of networkit allows the specification of source and target nodes for the EstimateBetweenness() method.
+
+   To install this modified version of the networkit package simply run:
+   ```
+   chmod +x networkit_compile.sh && ./networkit_compile.sh
+   ```
+
+   If there are issues when installing the networkit package make sure you have installed g++ and python3-dev on your machine.
+   On Ubuntu this can be done with the following commands:
+   ```
+   sudo apt-get install python3-dev 
+   sudo apt install g++
+   ```
 
 
 ## Reproducibility

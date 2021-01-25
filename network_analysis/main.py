@@ -1,6 +1,8 @@
 import networkx as nx
 import networkit as nk
 import pandas as pd
+import random
+import sys
 
 import utils
 
@@ -11,7 +13,7 @@ import argparse
 from timeit import default_timer as timer
 from pathlib import Path
 
-def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mode, num_samples):
+def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mode, num_samples, source_target_nodes, seed):
     '''
     Returns a pandas dataframe of relevant statistical measurements for the input graph `G`
     Each row corresponds to one node in the graph.
@@ -25,9 +27,18 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
         graph_type (str): one of {'bipartite', 'cell_graph'}, specifies the type of graph
         so that the appropriate analysis can be run.
 
+        output_dir (str): output directory for the  networkx to networkit node ID dictionaries
+
         computation_mode (str): one of {'all', 'exact', 'approximate'} specifies if an approximation
         of the betweenness score is computed or an exact computation is carried. If 'all' then both
-        are carried out 
+        are carried out
+
+        num_samples (int): number of samples nodes used for approximate betweenness centrality
+
+        source_target_nodes (str): one of {'all', 'cell_nodes', 'attribute_nodes'} specifying what type of nodes are used 
+        as source/target nodes in the BC computation.
+
+        seed (int): seed used for sampling nodes for approximate betweenness centrality  
        
     Returns
     -------
@@ -70,11 +81,22 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
     if computation_mode == 'all' or computation_mode == 'exact':
         df['betweenness_centrality'] = utils.betweenness.betweeness_exact(G)
     if computation_mode == 'all' or computation_mode == 'approximate':
-        # TODO figure out an appropriate sample size
-        df['approximate_betweenness_centrality'] = utils.betweenness.betweeness_approximate(G, num_samples=num_samples)
+        # Get the appropriate list of source_target_nodes
+        if source_target_nodes == 'cell_nodes':
+            cell_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='cell']
+            source_target_nodes_list = [nx_to_nk_id_dict[node] for node in cell_nodes]
+        elif source_target_nodes == 'attribute_nodes':
+            attr_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='attr']
+            source_target_nodes_list = [nx_to_nk_id_dict[node] for node in attr_nodes]
+        else:
+            source_target_nodes_list = None
+
+        if (source_target_nodes_list is not None and  num_samples > len(source_target_nodes_list)):
+            raise ValueError('The number of samples cannot be less than the number of source/target nodes specified.')
+
+        df['approximate_betweenness_centrality'] = utils.betweenness.betweeness_approximate(G, num_samples=num_samples, source_target_nodes_list=source_target_nodes_list, seed=seed)
 
     print('Finished calculating betweeness scores \nElapsed time:', timer()-start, 'seconds\n')
-
 
     # TODO: Add clustering coefficients for bipartite graphs (currently networkit doesn't support it for bipartite graphs)
 
@@ -211,7 +233,9 @@ def main(args):
             graph_type=args.mode,
             output_dir=args.output_dir,
             computation_mode=args.betweenness_mode,
-            num_samples = args.num_samples
+            num_samples = args.num_samples,
+            source_target_nodes = args.betweenness_source_target_nodes,
+            seed = args.seed
         )
         
         # Save the dataframe to file
@@ -294,6 +318,16 @@ if __name__ == "__main__":
     help='The mode for calculating the betweeness centrality. One of {all, exact, approximate}.\
      If all then we calculate both the exact and approximate betweeness')
 
+    # Specifies the types of nodes used as source/target nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`
+    # mode only cell nodes can be used as source/target nodes and similarly for attribute_nodes. 
+    parser.add_argument('-bstn', '--betweenness_source_target_nodes', default='all', choices=['all', 'cell_nodes', 'attribute_nodes'],
+    help='Specifies the types of nodes used as source/target nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`\
+    mode only cell nodes can be used as source/target nodes and similarly for attribute_nodes.')
+
+    # Seed used for the random sampling used by the approximate betweenness centrality algorithm
+    parser.add_argument('--seed', metavar='seed', type=int,
+    help='Seed used for the random sampling used by the approximate betweenness centrality algorithm')
+
     # Denotes the radius for the betweenness_in_k_neighborhood calculations. Argument is a range of min to max radius and the step.
     parser.add_argument('--betweenness_in_k_neighborhood', nargs=3, type=int, metavar=('min_radius', 'max_radius', 'step'),
     help='If specified we compute the betweenness_in_k_neighborhood in the specified radius range.')
@@ -322,6 +356,7 @@ if __name__ == "__main__":
     print('Ground Truth path:', args.groundtruth_path)
     print('Existing computation:', args.existing_computation)
     print('Betweenness mode:', args.betweenness_mode)
+    print('Source/Target nodes used for BC computation are of type:', args.betweenness_source_target_nodes)
     if args.betweenness_in_k_neighborhood:
         print('Betweenness in k neighborhood in the range:',  args.betweenness_in_k_neighborhood[0],
         '-', args.betweenness_in_k_neighborhood[1], 'with step size:', args.betweenness_in_k_neighborhood[2])
@@ -338,6 +373,17 @@ if __name__ == "__main__":
             print('Removing numerical valued nodes')
     else:
         print('Cleaning is set: OFF')
+    
+    if (args.betweenness_mode != 'exact'):
+        if args.seed:   
+            print('User specified seed:', args.seed)
+            # Set the seed
+            random.seed(args.seed)
+        else:
+            # Generate a random seed if not specified
+            args.seed = random.randrange(sys.maxsize)
+            random.seed(args.seed)
+            print('No seed specified, picking one at random. Seed chosen is:', args.seed)
     print('\n\n')
 
     # Create the output directory if it doesn't exist

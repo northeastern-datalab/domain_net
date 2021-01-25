@@ -33,7 +33,7 @@ def betweeness_exact(G, quiet=False):
 
     return betweeness_scores
 
-def betweeness_approximate(G, num_samples=5000, quiet=False):
+def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes_list=None, seed=0):
     '''
     Calculates an approximation the the betweenness scores for each node in networkit graph `G`
 
@@ -43,12 +43,17 @@ def betweeness_approximate(G, num_samples=5000, quiet=False):
 
         num_samples (int): number of samples to be used in the approximate calculation of betweenness
 
+        source_target_nodes_list (list of int): a list of node IDs to be used as source and target nodes for the approximate BC computation.
+        If the list set to None then all nodes in the graph are used as source/target nodes
+
+        seed (int): seed used for sampling nodes for the approximate BC computation
+
     Returns
     -------
     List of approximate betweenness scores for each node
     '''
     start = timer()
-    betweeness = nk.centrality.EstimateBetweenness(G, nSamples = num_samples, parallel=True, normalized=True).run()
+    betweeness = nk.centrality.EstimateBetweenness(G, nSamples = num_samples, parallel=True, normalized=True, sources=source_target_nodes_list, targets=source_target_nodes_list, seed=seed).run()
     approximate_betweeness_scores = betweeness.scores()
 
     if not quiet:

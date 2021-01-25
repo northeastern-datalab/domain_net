@@ -23,16 +23,31 @@ python main.py \
 The above command calculated the BC scores for every node in the graph representation of the synthetic benchmark.
 Once the script finishes running a pandas dataframe is saved in the specified output directory with the BC score for each node.
 
-### Example 2: Calculate Approximate BC scores for every node in the TUS benchmark by sampling 5000 nodes
+### Example 2: Calculate Approximate BC scores for every node in the Synthetic Benchmark (SB) by sampling 300 nodes
+```
+python main.py \
+-g ../graph_construction/combined_graphs_output/synthetic_benchmark_bipartite/bipartite/bipartite.graph \
+-o output/synthetic_example_bipartite/ \
+--num_samples 300 \
+--betweenness_mode approximate \
+--betweenness_source_target_nodes cell_nodes \
+--seed 1
+```
+The above command calculated the BC scores for every node in the graph representation of the synthetic benchmark.
+Once the script finishes running a pandas dataframe is saved in the specified output directory with the BC score for each node.
+
+### Example 3: Calculate Approximate BC scores for every node in the TUS benchmark by sampling 5000 nodes
 ```
 python main.py \
 -g ../graph_construction/combined_graphs_output/TUS/bipartite/bipartite.graph \
 -o output/TUS/ \
 --betweenness_mode approximate \
---num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle
+--num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle \
+--betweenness_source_target_nodes cell_nodes \
+--seed 1
 ```
 
-### Example 3: Calculate Approximate BC scores for every node in the TUS benchmark with no homographs by sampling 5000 nodes
+### Example 4: Calculate Approximate BC scores for every node in the TUS benchmark with no homographs by sampling 5000 nodes
 ```
 python main.py \
 -g ../graph_construction/combined_graphs_output/TUS_no_homographs/bipartite/bipartite.graph \
