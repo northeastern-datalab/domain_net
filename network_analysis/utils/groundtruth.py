@@ -8,8 +8,11 @@ from timeit import default_timer as timer
 
 def get_filename_column_tuple_to_unionable_pairs_dict(G, groundtruth):
     '''
-    Given the groundtruth get for each (filename, column_name) get a set
+    Given the groundtruth get for each (filename, column_name) a set
     of (filename, column_name) tuples that are unionable with the key.
+    Each tuple in the set must correspond to a single attribute node in the graph `G`.
+    For example, if a graph has N attribute nodes then the returned dictionary has N keys. 
+
     
     Arguments
     -------
@@ -25,6 +28,14 @@ def get_filename_column_tuple_to_unionable_pairs_dict(G, groundtruth):
     '''
     start = timer()
     print('Constructing filename_column_tuple_to_unionable_pairs_dict...')
+
+    # List of attribute nodes in the specified graph `G`
+    attr_nodes = [n for n, d in G.nodes(data=True) if d['type']=='attr']
+    filename_column_tuples_in_graph = set()
+    for attr_node in attr_nodes:
+        file_name = G.nodes[attr_node]['filename']
+        column_name = G.nodes[attr_node]['column_name']
+        filename_column_tuples_in_graph.add((file_name, column_name))
     
     filename_column_tuple_to_unionable_pairs_dict = {}
 
@@ -35,9 +46,13 @@ def get_filename_column_tuple_to_unionable_pairs_dict(G, groundtruth):
 
                 # Check if (filename, column_pair[0]) is in the dictionary (if not initialize it)
                 if (filename, column_pair[0]) not in filename_column_tuple_to_unionable_pairs_dict:
-                    filename_column_tuple_to_unionable_pairs_dict[((filename, column_pair[0]))] = set()
+                    # Make sure that (filename, column_pair[0]) exists in the filename_column_tuples_in_graph set
+                    if (filename, column_pair[0]) in filename_column_tuples_in_graph:
+                        filename_column_tuple_to_unionable_pairs_dict[((filename, column_pair[0]))] = set()
                 else:
-                    filename_column_tuple_to_unionable_pairs_dict[((filename, column_pair[0]))].add((other_filename, column_pair[1]))
+                    # Make sure that (other_filename, column_pair[1]) exists in the filename_column_tuples_in_graph
+                    if (other_filename, column_pair[1]) in filename_column_tuples_in_graph:
+                        filename_column_tuple_to_unionable_pairs_dict[((filename, column_pair[0]))].add((other_filename, column_pair[1]))
 
     print('Finished Constructing filename_column_tuple_to_unionable_pairs_dict\
         \nElapsed time:', timer()-start, 'seconds\n')

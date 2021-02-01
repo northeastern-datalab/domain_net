@@ -13,7 +13,7 @@ import argparse
 from timeit import default_timer as timer
 from pathlib import Path
 
-def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mode, num_samples, source_target_nodes, seed):
+def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mode, num_samples, source_nodes, target_nodes, seed):
     '''
     Returns a pandas dataframe of relevant statistical measurements for the input graph `G`
     Each row corresponds to one node in the graph.
@@ -35,8 +35,11 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
 
         num_samples (int): number of samples nodes used for approximate betweenness centrality
 
-        source_target_nodes (str): one of {'all', 'cell_nodes', 'attribute_nodes'} specifying what type of nodes are used 
-        as source/target nodes in the BC computation.
+        source_nodes (str): one of {'all', 'cell_nodes', 'attribute_nodes'} specifying what type of nodes are used 
+        as source nodes in the approximate BC computation.
+
+        target_nodes (str): one of {'all', 'cell_nodes', 'attribute_nodes'} specifying what type of nodes are used 
+        as target nodes in the approximate BC computation.
 
         seed (int): seed used for sampling nodes for approximate betweenness centrality  
        
@@ -75,26 +78,61 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
     node_types = [G_nx.nodes[node]['type'] for node in df['node'].values]
     df['node_type'] = node_types
 
+    # List of cell and attribute nodes
+    cell_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='cell']
+    attr_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='attr']
+
+
     start = timer()
     print('Calculating betweeness scores...')
 
     if computation_mode == 'all' or computation_mode == 'exact':
-        df['betweenness_centrality'] = utils.betweenness.betweeness_exact(G)
-    if computation_mode == 'all' or computation_mode == 'approximate':
-        # Get the appropriate list of source_target_nodes
-        if source_target_nodes == 'cell_nodes':
-            cell_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='cell']
-            source_target_nodes_list = [nx_to_nk_id_dict[node] for node in cell_nodes]
-        elif source_target_nodes == 'attribute_nodes':
-            attr_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='attr']
-            source_target_nodes_list = [nx_to_nk_id_dict[node] for node in attr_nodes]
-        else:
-            source_target_nodes_list = None
+        # If we compute exact betweeness using subset of nodes as source/target nodes
+        # use networkx implementation since networkit does not provide exact BC with a subset of nodes
 
-        if (source_target_nodes_list is not None and  num_samples > len(source_target_nodes_list)):
+        if source_target_nodes == 'all':
+            df['betweenness_centrality'] = utils.betweenness.betweeness_exact(G)
+        elif source_target_nodes == 'cell_nodes':
+            cell_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='cell']
+            betweenness_centrality = nx.algorithms.centrality.betweenness_centrality_subset(G_nx, sources=cell_nodes, targets=cell_nodes, normalized=True)
+            df['betweenness_centrality'] = betweenness_centrality.values()
+
+    if computation_mode == 'all' or computation_mode == 'approximate':
+        # Get the appropriate list of source nodes
+        if source_nodes == 'cell_nodes':
+            source_nodes_list = [nx_to_nk_id_dict[node] for node in cell_nodes]
+        elif source_nodes == 'attribute_nodes':
+            source_nodes_list = [nx_to_nk_id_dict[node] for node in attr_nodes]
+        elif source_nodes == 'all':
+            source_nodes_list = None
+
+        # Get the appropriate list of source nodes
+        if target_nodes == 'cell_nodes':
+            target_nodes_list = [nx_to_nk_id_dict[node] for node in cell_nodes]
+        elif target_nodes == 'attribute_nodes':
+            target_nodes_list = [nx_to_nk_id_dict[node] for node in attr_nodes]
+        elif target_nodes == 'all':
+            target_nodes_list = None
+
+        # if source_target_nodes == 'cell_nodes':
+        #     cell_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='cell']
+        #     source_target_nodes_list = [nx_to_nk_id_dict[node] for node in cell_nodes]
+        # elif source_target_nodes == 'attribute_nodes':
+        #     attr_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='attr']
+        #     source_target_nodes_list = [nx_to_nk_id_dict[node] for node in attr_nodes]
+        # else:
+        #     source_target_nodes_list = None
+
+        if (source_nodes_list is not None and  num_samples > len(source_nodes_list)):
             raise ValueError('The number of samples cannot be less than the number of source/target nodes specified.')
 
-        df['approximate_betweenness_centrality'] = utils.betweenness.betweeness_approximate(G, num_samples=num_samples, source_target_nodes_list=source_target_nodes_list, seed=seed)
+        df['approximate_betweenness_centrality'] = utils.betweenness.betweeness_approximate(
+            G=G,
+            num_samples=num_samples,
+            source_nodes_list=source_nodes_list,
+            target_nodes_list=target_nodes_list,
+            seed=seed
+        )
 
     print('Finished calculating betweeness scores \nElapsed time:', timer()-start, 'seconds\n')
 
@@ -234,7 +272,8 @@ def main(args):
             output_dir=args.output_dir,
             computation_mode=args.betweenness_mode,
             num_samples = args.num_samples,
-            source_target_nodes = args.betweenness_source_target_nodes,
+            source_nodes = args.betweenness_source_nodes,
+            target_nodes = args.betweenness_target_nodes,
             seed = args.seed
         )
         
@@ -318,11 +357,17 @@ if __name__ == "__main__":
     help='The mode for calculating the betweeness centrality. One of {all, exact, approximate}.\
      If all then we calculate both the exact and approximate betweeness')
 
-    # Specifies the types of nodes used as source/target nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`
-    # mode only cell nodes can be used as source/target nodes and similarly for attribute_nodes. 
-    parser.add_argument('-bstn', '--betweenness_source_target_nodes', default='all', choices=['all', 'cell_nodes', 'attribute_nodes'],
-    help='Specifies the types of nodes used as source/target nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`\
-    mode only cell nodes can be used as source/target nodes and similarly for attribute_nodes.')
+    # Specifies the types of nodes used as source nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`
+    # mode only cell nodes can be used as source nodes and similarly for attribute_nodes. 
+    parser.add_argument('-bsn', '--betweenness_source_nodes', default='all', choices=['all', 'cell_nodes', 'attribute_nodes'],
+    help='Specifies the types of nodes used as source nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`\
+    mode only cell nodes can be used as source nodes and similarly for attribute_nodes.')
+
+    # Specifies the types of nodes used as target nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`
+    # mode only cell nodes can be used as target nodes and similarly for attribute_nodes.
+    parser.add_argument('-btn', '--betweenness_target_nodes', default='all', choices=['all', 'cell_nodes', 'attribute_nodes'],
+    help='Specifies the types of nodes used as target nodes when computing BC. For `all` mode, all the nodes are used, for `cell_nodes`\
+    mode only cell nodes can be used as target nodes and similarly for attribute_nodes.')
 
     # Seed used for the random sampling used by the approximate betweenness centrality algorithm
     parser.add_argument('--seed', metavar='seed', type=int,
@@ -356,7 +401,8 @@ if __name__ == "__main__":
     print('Ground Truth path:', args.groundtruth_path)
     print('Existing computation:', args.existing_computation)
     print('Betweenness mode:', args.betweenness_mode)
-    print('Source/Target nodes used for BC computation are of type:', args.betweenness_source_target_nodes)
+    print('Source nodes used for BC computation are of type:', args.betweenness_source_nodes)
+    print('Target nodes used for BC computation are of type:', args.betweenness_target_nodes)
     if args.betweenness_in_k_neighborhood:
         print('Betweenness in k neighborhood in the range:',  args.betweenness_in_k_neighborhood[0],
         '-', args.betweenness_in_k_neighborhood[1], 'with step size:', args.betweenness_in_k_neighborhood[2])

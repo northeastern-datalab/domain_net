@@ -1,0 +1,20 @@
+python num_meanings_groundtruth.py \
+-g ../graph_construction/combined_graphs_output/TUS/bipartite/bipartite.graph \
+--unionable_pairs_dict output/TUS/filename_column_tuple_to_unionable_pairs_dict.pickle \
+-df output/TUS/graph_stats_with_groundtruth_df.pickle \
+-od output/TUS/
+
+
+# TUS sources=cell targets=all
+python main.py \
+-g ../graph_construction/combined_graphs_output/TUS/bipartite/bipartite.graph \
+-o output/TUS_source_cell_target_all/ \
+--betweenness_mode approximate \
+--num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle \
+--betweenness_source_nodes cell_nodes \
+--betweenness_target_nodes all \
+--seed 1
+
+python TUS_topk_figures.py \
+--df_path output/TUS_source_cell_target_all/graph_stats_with_groundtruth_df.pickle \
+--save_dir figures/TUS_source_cell_target_all/

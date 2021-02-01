@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import argparse
+import json
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -82,6 +83,32 @@ def main(df_path, save_dir):
     print('F1-Score:', measures_at_cut_off['f1_score'].values[0])
     print('Average Precision:', measures_at_cut_off['average_precision_at_rank'].values[0])
 
+    # Find k with the largest F1-score~
+    measures_at_max_f1_score = df.loc[df['f1_score'].idxmax()]
+    print("Maximum f1-score is", measures_at_max_f1_score['f1_score'], "and it occurs at k=" + str(measures_at_max_f1_score['rank']))
+
+    # Save the stats into a json file
+    stats_dict = {
+        'measures_at_cut_off': {
+            'rank': int(num_true_homographs),
+            'precision': measures_at_cut_off['precision'].values[0],
+            'recall': measures_at_cut_off['recall'].values[0],
+            'f1_score': measures_at_cut_off['f1_score'].values[0],
+            'average_precision': measures_at_cut_off['average_precision_at_rank'].values[0]
+        },
+    
+        'measures_at_max_f1_score': {
+            'rank': int(measures_at_max_f1_score['rank']),
+            'precision': measures_at_max_f1_score['precision'],
+            'recall': measures_at_max_f1_score['recall'],
+            'f1_score': measures_at_max_f1_score['f1_score'],
+            'average_precision': measures_at_max_f1_score['average_precision_at_rank']
+        }
+    }
+
+    with open(args.save_dir + 'results_summary.json', 'w') as fp:
+        json.dump(stats_dict, fp, sort_keys=True, indent=4)
+
     # Melt the dictionary for easy use with seaborn
     df_melt = pd.melt(df, id_vars=['rank'], value_vars=['precision', 'recall', 'f1_score', 'average_precision_at_rank'], var_name='measure')
     
@@ -154,9 +181,6 @@ if __name__ == "__main__":
 
     # Parse the arguments
     args = parser.parse_args()
-
-    # df_path = 'output/TUS/graph_stats_with_groundtruth_df.pickle'
-    # save_dir = 'figures/TUS/'
 
     # Create output directory for figures
     Path(args.save_dir).mkdir(parents=True, exist_ok=True)
