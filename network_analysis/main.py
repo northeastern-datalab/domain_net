@@ -125,7 +125,11 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
             seed=seed
         )
 
-    print('Finished calculating betweeness scores \nElapsed time:', timer()-start, 'seconds\n')
+    BC_elapsed_time = timer()-start
+    print('Finished calculating betweeness scores \nElapsed time:', BC_elapsed_time, 'seconds\n')
+    with open(args.output_dir + 'info.json', 'w') as fp:
+        json_dict = {'BC_elapsed_time': BC_elapsed_time}
+        json.dump(json_dict, fp, sort_keys=True, indent=4)
 
     # TODO: Add clustering coefficients for bipartite graphs (currently networkit doesn't support it for bipartite graphs)
 
