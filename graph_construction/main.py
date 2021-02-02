@@ -31,6 +31,10 @@ def run_pipeline_on_mode(mode, args):
         G = CellValuesOnlyGraph(files, input_data_file_type)
 
     print('Created graph has', G.G.number_of_nodes(), 'nodes and', G.G.number_of_edges(), 'edges.\n')
+    if mode == "bipartite":
+        cell_nodes = [x for x,y in G.G.nodes(data=True) if y['type']=='cell']
+        attr_nodes = [x for x,y in G.G.nodes(data=True) if y['type']=='attr']
+        print('There are', len(cell_nodes), 'nodes of type cell and', len(attr_nodes), 'nodes of type attribute.\n')
  
     # Create a file (and directory as necessary) to save the combined graph
     combined_graph_path = args.output_dir + mode

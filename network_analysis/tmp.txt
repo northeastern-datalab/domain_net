@@ -13,7 +13,7 @@ python main.py \
 --num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle \
 --betweenness_source_nodes cell_nodes \
 --betweenness_target_nodes all \
---seed 1
+--seed 2
 
 python TUS_topk_figures.py \
 --df_path output/TUS_source_cell_target_all/graph_stats_with_groundtruth_df.pickle \

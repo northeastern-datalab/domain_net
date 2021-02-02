@@ -23,7 +23,8 @@ do
     -o "output/TUS_cell_nodes/seed$seed/" \
     --betweenness_mode approximate \
     --num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle \
-    --betweenness_source_target_nodes cell_nodes \
+    --betweenness_source_nodes cell_nodes
+    --betweenness_target_nodes cell_nodes \
     --seed $seed
 done
 

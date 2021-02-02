@@ -114,15 +114,6 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
         elif target_nodes == 'all':
             target_nodes_list = None
 
-        # if source_target_nodes == 'cell_nodes':
-        #     cell_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='cell']
-        #     source_target_nodes_list = [nx_to_nk_id_dict[node] for node in cell_nodes]
-        # elif source_target_nodes == 'attribute_nodes':
-        #     attr_nodes = [x for x,y in G_nx.nodes(data=True) if y['type']=='attr']
-        #     source_target_nodes_list = [nx_to_nk_id_dict[node] for node in attr_nodes]
-        # else:
-        #     source_target_nodes_list = None
-
         if (source_nodes_list is not None and  num_samples > len(source_nodes_list)):
             raise ValueError('The number of samples cannot be less than the number of source/target nodes specified.')
 
