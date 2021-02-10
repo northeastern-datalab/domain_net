@@ -16,5 +16,12 @@ python main.py \
 --seed 2
 
 python TUS_topk_figures.py \
---df_path output/TUS_source_cell_target_all/graph_stats_with_groundtruth_df.pickle \
---save_dir figures/TUS_source_cell_target_all/
+--df_path output/TUS_source_all_target_all/seed1/graph_stats_with_groundtruth_df.pickle \
+--save_dir figures/TUS_source_all_target_all/seed1/
+
+
+# Centrality measures
+python centrality_measures.py \
+--graph ../graph_construction/combined_graphs_output/TUS/bipartite/bipartite.graph \
+--dataframe output/TUS_source_all_target_all/seed1/graph_stats_with_groundtruth_df.pickle \
+--centrality_measures katz
