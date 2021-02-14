@@ -1,5 +1,5 @@
 Copyright (c) 2013 Christian Staudt, Henning Meyerhenke
-Copyright (c) 2021 Aristotelis Leventidis
+Copyright (c) 2021 Aristotelis Leventidis, Laura Di Rocco
 
 
 MIT License (http://opensource.org/licenses/MIT)

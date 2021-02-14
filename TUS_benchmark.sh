@@ -17,7 +17,8 @@ python main.py \
 -g ../graph_construction/combined_graphs_output/TUS/bipartite/bipartite.graph \
 -o output/TUS/ \
 --betweenness_mode approximate \
---num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle
+--num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle \
+--seed 1
 
 
 echo "Create top-k evaluation figures"

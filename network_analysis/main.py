@@ -381,7 +381,7 @@ if __name__ == "__main__":
             random.seed(args.seed)
         else:
             # Generate a random seed if not specified
-            args.seed = random.randrange(sys.maxsize)
+            args.seed = random.randrange(2**32)
             random.seed(args.seed)
             print('No seed specified, picking one at random. Seed chosen is:', args.seed)
     print('\n\n')
