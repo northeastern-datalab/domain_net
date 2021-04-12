@@ -60,9 +60,9 @@ class BipartiteGraph:
         for i in tqdm(range(0, len(self.tables))):
             
             if self.input_data_file_type == 'csv':
-                df = pd.read_csv(self.tables[i])
+                df = pd.read_csv(self.tables[i], error_bad_lines=False, warn_bad_lines=False)
             elif self.input_data_file_type == 'tsv':
-                df = pd.read_csv(self.tables[i], sep='\t')
+                df = pd.read_csv(self.tables[i], sep='\t', error_bad_lines=False, warn_bad_lines=False)
             else:
                 raise ValueError('input_data_file_type must be one of: csv or tsv')
             

@@ -69,7 +69,7 @@ def get_graph_statistics_networkit(G_nx, graph_type, output_dir, computation_mod
 
     # Construct the dataframe placeholder
     df = pd.DataFrame()
-    df['node'] = nx_to_nk_id_dict.keys()
+    df['node'] = list(nx_to_nk_id_dict.keys())
 
     # Add node type as a column
     node_types = [G_nx.nodes[node]['type'] for node in df['node'].values]
