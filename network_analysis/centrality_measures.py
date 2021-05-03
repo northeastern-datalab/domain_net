@@ -76,7 +76,7 @@ def compute_centrality_measures(G_nx, df, centrality_measures):
             pagerank_scores = nk.centrality.PageRank(G, damp=0.85, tol=1e-12).run().scores()
             df[measure] = pagerank_scores        
 
-        print('Finished computing', measure,'measure.\nElapsed time:', timer()-start)
+        print('Finished computing', measure,'measure.\nElapsed time:', timer()-start,'\n')
     
     add_cardinality_column(df, G_nx)
 

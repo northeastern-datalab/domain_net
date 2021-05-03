@@ -31,7 +31,8 @@ python main.py \
 -g ../graph_construction/combined_graphs_output/TUS_no_homographs/bipartite/bipartite.graph \
 -o output/TUS_no_homographs/ \
 --betweenness_mode approximate \
---num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle
+--num_samples 5000 --groundtruth_path ground_truth/groundtruth_TUS.pickle \
+--seed 1
 
 echo "Calculate BC scores for each graph representation"
 chmod +x cardinality_experiment.sh

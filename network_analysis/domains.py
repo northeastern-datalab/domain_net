@@ -105,33 +105,33 @@ def improve_domains(domains_dict):
     for domain_id in domains_dict:
         cur_col_names = frozenset(set([tup[1] for tup in domains_dict[domain_id]]))
 
-        #### UNCOMMEND BELOW IF WE WANT TO USE SUBSET DEFINITION FOR COMBINING DOMAINS ######
-        # # Make sure that col_names is not a subset of another col_names set
-        # cur_col_names_is_subset = False
-        # for s in col_names_sets_to_domain_ids.copy():
-        #     if cur_col_names.issubset(s):
-        #         cur_col_names_is_subset = True
-        #         col_names_sets_to_domain_ids[s].append(domain_id)
-        #         break
-        #     elif s.issubset(cur_col_names):
-        #         cur_col_names_is_subset = True
-        #         # cur_col_names set s should be removed from the set of col_names as it is a subset of cur_col_names
-        #         domain_ids = col_names_sets_to_domain_ids[s]
-        #         domain_ids.append(domain_id)
-        #         col_names_sets_to_domain_ids.pop(s, None)
-        #         col_names_sets_to_domain_ids[cur_col_names] = [domain_ids]
-        #         break
-        # # Add the current set as it isn't a subset of any other domain        
-        # if not cur_col_names_is_subset:
-        #     if cur_col_names not in col_names_sets_to_domain_ids:
-        #         col_names_sets_to_domain_ids[cur_col_names] = [domain_id]
-        #     else:
-        #         col_names_sets_to_domain_ids[cur_col_names].append(domain_id)
+        ### UNCOMMEND BELOW IF WE WANT TO USE SUBSET DEFINITION FOR COMBINING DOMAINS ######
+        # Make sure that col_names is not a subset of another col_names set
+        cur_col_names_is_subset = False
+        for s in col_names_sets_to_domain_ids.copy():
+            if cur_col_names.issubset(s):
+                cur_col_names_is_subset = True
+                col_names_sets_to_domain_ids[s].append(domain_id)
+                break
+            elif s.issubset(cur_col_names):
+                cur_col_names_is_subset = True
+                # cur_col_names set s should be removed from the set of col_names as it is a subset of cur_col_names
+                domain_ids = col_names_sets_to_domain_ids[s]
+                domain_ids.append(domain_id)
+                col_names_sets_to_domain_ids.pop(s, None)
+                col_names_sets_to_domain_ids[cur_col_names] = domain_ids
+                break
+        # Add the current set as it isn't a subset of any other domain        
+        if not cur_col_names_is_subset:
+            if cur_col_names not in col_names_sets_to_domain_ids:
+                col_names_sets_to_domain_ids[cur_col_names] = [domain_id]
+            else:
+                col_names_sets_to_domain_ids[cur_col_names].append(domain_id)
 
-        if cur_col_names not in col_names_sets_to_domain_ids:
-            col_names_sets_to_domain_ids[cur_col_names] = [domain_id]
-        else:
-            col_names_sets_to_domain_ids[cur_col_names].append(domain_id)
+        # if cur_col_names not in col_names_sets_to_domain_ids:
+        #     col_names_sets_to_domain_ids[cur_col_names] = [domain_id]
+        # else:
+        #     col_names_sets_to_domain_ids[cur_col_names].append(domain_id)
 
     num_domains_removed = 0
 
@@ -152,7 +152,7 @@ def improve_domains(domains_dict):
                 num_domains_removed += 1
                 new_domains_dict.pop(domain_ids[i], None)
 
-    print(num_domains_removed, "domains were removed by removing multiple domains with the same set of column names")
+    print(num_domains_removed, "domains were removed by removing multiple domains with the same set or subset of column names")
     
     # Rename the domain ids so they are consecutive integers starting from 0
     domain_ids_sorted = sorted(list(new_domains_dict.keys()))
@@ -174,7 +174,7 @@ def main(args):
 
     # Get list of attribute nodes and valid (filename, column) tuples for the current graph
     attr_nodes = [n for n, d in G.nodes(data=True) if d['type']=='attr']
-    print("There are", len(attr_nodes), "attribute nodes in the graph.")
+    print("There are", len(attr_nodes), "attribute nodes in the graph\n")
     filename_column_tuples_in_graph = set()
     for attr_node in attr_nodes:
         file_name = G.nodes[attr_node]['filename']
@@ -211,20 +211,14 @@ def main(args):
         attr_to_domain_ids[attr] = matching_domain_ids
 
     print("There are", num_attrs_with_more_than_one_domain, "attribute nodes that map to more than one domain")
-    dom_ids = attr_to_domain_ids['Division name_t_1934eacab8c57857____c18_1____3.csv']
-    for id in dom_ids:
-        print("id:", id, 'has col names:', set([tup[1] for tup in domains_dict[id]]))
-
-    exit()
-
     
-    # Write domains info to output_dir
+    # Write domains info to file specified by args.output_path
     output_dict = {}
     domains_dict = {dom_id: list(domains_dict[dom_id]) for dom_id in domains_dict}
     output_dict['domains'] = domains_dict
     output_dict['attributes'] = attr_to_domain_ids
 
-    with open(args.output_dir+"domain_info.json", "w") as outfile: 
+    with open(args.output_path, "w") as outfile: 
         json.dump(output_dict, outfile, indent=4)
 
 
@@ -240,9 +234,9 @@ if __name__ == "__main__":
     parser.add_argument('--unionable_pairs_dict', metavar='unionable_pairs_dict', required=True,
     help='Path to the filename_column_unionable_pairs dictionary')
 
-    # Output directory for the homograph to number of meanings dictionary
-    parser.add_argument('-od', '--output_dir', metavar='df', required=True,
-    help='Output directory for the homograph to number of meanings dictionary')
+    # Output path for the homograph to number of meanings json file
+    parser.add_argument('-op', '--output_path', metavar='df', required=True,
+    help='Output path for the homograph to number of meanings json file')
 
     # Parse the arguments
     args = parser.parse_args()
@@ -251,8 +245,7 @@ if __name__ == "__main__":
 
     print('Graph path:', args.graph)
     print('Unionable pairs dictionary path:', args.unionable_pairs_dict)
-    # print('Graph stats with groundtruth dataframe path:', args.dataframe)
-    print('Output directory:', args.output_dir)
+    print('Output directory:', args.output_path)
     print('\n\n')
 
     main(args)
