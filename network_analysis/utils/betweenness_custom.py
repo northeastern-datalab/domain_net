@@ -2,7 +2,7 @@
 Betweenness Centrality code adapted from NetworkX
 (https://networkx.org/documentation/stable/_modules/networkx/algorithms/centrality/betweenness.html#betweenness_centrality)
 
-This betweenness_centrality here tries to accommodate for collapsed nodes
+This betweenness_centrality here tries to allow support for compressed graphs
 '''
 
 from heapq import heappush, heappop
@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 @py_random_state(5)
 def betweenness_centrality(
-    G, k=None, normalized=True, weight=None, endpoints=False, seed=None
+    G, k=None, normalized=True, weight=None, endpoints=False, seed=None, ident=None
 ):
     r"""Compute the shortest-path betweenness centrality for nodes.
 
@@ -58,6 +58,12 @@ def betweenness_centrality(
         Indicator of random number generation state.
         See :ref:`Randomness<randomness>`.
         Note that this is only used if k is not None.
+
+    ident : None or dictionary
+        Maps each node to an integer representing the number of nodes
+        that are identical to it when using graph compression.
+        For instace if node v is a compressed node that was originally made up from 5 nodes
+        then ident[v]=5. If not specified, all nodes v will have ident[v]=1 
 
     Returns
     -------
@@ -124,17 +130,21 @@ def betweenness_centrality(
         nodes = G
     else:
         nodes = seed.sample(G.nodes(), k)
+
+    if ident is None:
+        ident_dict = dict.fromkeys(g_compressed, 1)
+
     for s in nodes:
         # single source shortest paths
         if weight is None:  # use BFS
-            S, P, sigma = _single_source_shortest_path_basic(G, s)
+            S, P, sigma = _single_source_shortest_path_basic(G, s, ident)
         else:  # use Dijkstra's algorithm
             S, P, sigma = _single_source_dijkstra_path_basic(G, s, weight)
         # accumulation
         if endpoints:
             betweenness = _accumulate_endpoints(betweenness, S, P, sigma, s)
         else:
-            betweenness = _accumulate_basic(betweenness, S, P, sigma, s)
+            betweenness = _accumulate_basic(betweenness, S, P, sigma, s, ident)
     # rescaling
     betweenness = _rescale(
         betweenness,
@@ -303,7 +313,7 @@ def get_delta(S, P, sigma):
     return delta
 
 
-def _single_source_shortest_path_basic(G, s):
+def _single_source_shortest_path_basic(G, s, ident):
     S = []
     P = {}
     for v in G:
@@ -324,14 +334,7 @@ def _single_source_shortest_path_basic(G, s):
                 Q.append(w)
                 D[w] = Dv + 1
             if D[w] == Dv + 1:  # this is a shortest path, count paths
-                # TODO: This is probably where we modify accordingly with the collapsed nodes
-                ### MY CHANGE START ###
-                if 'weight' in G[v][w]:
-                    sigma[w] = sigma[w] + sigmav * G[v][w]['weight']
-                else:
-                    sigma[w] += sigmav
-                ### END MY CHANGE ###
-                # sigma[w] += sigmav
+                sigma[w] = sigma[w] + sigmav * ident[v]
                 P[w].append(v)  # predecessors
     return S, P, sigma
 
@@ -386,15 +389,15 @@ def _accumulate_subset(betweenness, S, P, sigma, s, targets):
     return betweenness
 
 
-def _accumulate_basic(betweenness, S, P, sigma, s):
+def _accumulate_basic(betweenness, S, P, sigma, s, ident):
     delta = dict.fromkeys(S, 0)
     while S:
         w = S.pop()
-        coeff = (1 + delta[w]) / sigma[w]
+        coeff = ((1 + delta[w]) * ident[w]) / sigma[w]
         for v in P[w]:
             delta[v] += sigma[v] * coeff
         if w != s:
-            betweenness[w] += delta[w]
+            betweenness[w] += (delta[w] * ident[s])
     return betweenness
 
 def _accumulate_endpoints(betweenness, S, P, sigma, s):
