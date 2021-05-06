@@ -1,10 +1,45 @@
 import networkit as nk
 import networkx as nx
+import pandas as pd
 
 from timeit import default_timer as timer
 from tqdm import tqdm
 
-def betweeness_exact(G, quiet=False):
+def betweeness_exact_df(G, normalized=True, quiet=False):
+    '''
+    Calculates the exact betweenness for every node in a networkx graph.
+    The computation is carried using networkit.
+
+    Arguments
+    -------
+        G (networkx graph): a networkx graph. Must be a bipartite graph with node types 'cell' and 'attr'
+
+        normalized (bool): specifies if the BC scores need to be normalized
+
+        quiet (bool): specifies if informational print statements are presented  
+
+    Returns
+    -------
+    A dataframe keyed by each node with a mapping to its respective 
+    'node_type' and exact 'betweenness_centrality' score
+    '''
+
+    G_nk = nk.nxadapter.nx2nk(G)
+    nx_to_nk_id_dict = dict((id, int_id) for (id, int_id) in zip(G.nodes(), range(G.number_of_nodes())))
+
+    # Construct the dataframe placeholder
+    df = pd.DataFrame()
+    df['node'] = list(nx_to_nk_id_dict.keys())
+
+    # Add node type as a column
+    node_types = [G.nodes[node]['type'] for node in df['node'].values]
+    df['node_type'] = node_types
+    df['betweenness_centrality'] = betweeness_exact(G_nk, normalized=normalized, quiet=quiet)
+
+    return df
+
+
+def betweeness_exact(G, normalized=True, quiet=False):
     '''
     Calculates the exact betweenness for networkit graph `G`. Returns the exact betweenness of the nodes in a list
     in the order of the nodes in `G`
@@ -19,7 +54,7 @@ def betweeness_exact(G, quiet=False):
     '''
     start = timer()
     # Calculate betweeness centrality for each node
-    betweeness = nk.centrality.Betweenness(G, normalized=True).run()
+    betweeness = nk.centrality.Betweenness(G, normalized=normalized).run()
     betweeness_scores = betweeness.scores()
 
     if not quiet:

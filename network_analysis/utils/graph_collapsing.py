@@ -73,7 +73,8 @@ def get_compressed_graph(G):
 
     # Loop over each cell node to populate the `attr_nodes_set_to_cell_nodes` dictionary
     cell_nodes = [x for x,y in G.nodes(data=True) if y['type']=='cell']
-    for cell in cell_nodes:
+    print("Constructing attr_nodes_set_to_cell_nodes dictionary...")
+    for cell in tqdm(cell_nodes):
         cur_attr_nodes = frozenset(utils.graph_helpers.get_attribute_of_instance(G, cell))
         if cur_attr_nodes not in attr_nodes_set_to_cell_nodes:
             attr_nodes_set_to_cell_nodes[cur_attr_nodes] = set([cell])
@@ -85,7 +86,8 @@ def get_compressed_graph(G):
     compressed_node_id = 0
 
     # Compress cell nodes if an attr_nodes_set maps to more than one cell node
-    for attr_nodes_set in attr_nodes_set_to_cell_nodes:
+    print("Compressing cell nodes...")
+    for attr_nodes_set in tqdm(attr_nodes_set_to_cell_nodes):
         if len(attr_nodes_set_to_cell_nodes[attr_nodes_set]) > 1:
             cur_cell_nodes = list(attr_nodes_set_to_cell_nodes[attr_nodes_set])
             # Ensure the newly introduced compressed_node does not already exist in G
@@ -94,10 +96,66 @@ def get_compressed_graph(G):
 
             # Use the first 'node' in cur_cell_nodes as the compressed node and remove all other nodes from the graph
             rename_mapping = {cur_cell_nodes[0]: 'compressed_node_' + str(compressed_node_id)}
-            G = nx.relabel_nodes(G, rename_mapping)
+            # G = nx.relabel_nodes(G, rename_mapping)
+            nx.relabel_nodes(G, rename_mapping, copy=False)
             G.remove_nodes_from(cur_cell_nodes[1:])
 
             compressed_node_to_original_nodes['compressed_node_' + str(compressed_node_id)] = cur_cell_nodes
     
     
     return G, compressed_node_to_original_nodes
+
+def get_ident_dict(G_compressed, compressed_node_to_orig_nodes):
+    '''
+    Given the the compressed graph and a mapping of each compressed node its set of original nodes,
+    return the ident value for each node in the compressed graph.
+
+    The ident value is the the number of original nodes that are represented by a node in the compreseed
+    graph. A compressed node will by definition have an ident value greater than 1. 
+    
+    Arguments
+    -------
+    G_compressed (Networkx graph): The compressed networkx graph
+
+    compressed_node_to_orig_nodes (dict): dictionary mapping each compressed node to the set of nodes
+    that it was made up in the original graph
+
+    Returns
+    -------
+    Returns a dictionary mapping each node in the compressed graph to its ident value
+    '''
+    ident_dict = dict.fromkeys(G_compressed, 1)
+    for node in compressed_node_to_orig_nodes:
+        ident_dict[node] = len(compressed_node_to_orig_nodes[node])
+    return ident_dict
+
+
+def get_bc_scores_of_original_graph(compressed_graph_to_bc_score, compressed_node_to_orig_nodes):
+    '''
+    Given the BC scores for each node in the compressed graph return a dictionary with the BC scores
+    for each node in the original graph
+    
+    Arguments
+    -------
+    compressed_graph_to_bc_score (dict): dictionary mapping each node in the compressed graph
+    to its BC score
+
+    compressed_node_to_orig_nodes (dict): dictionary mapping each compressed node to the set of nodes
+    that it was made up in the original graph
+
+    Returns
+    -------
+    Returns a dictionary mapping each node in the original graph to its BC score
+    '''
+    orig_node_to_bc_score = {}
+
+    for n in compressed_graph_to_bc_score:
+        if n in compressed_node_to_orig_nodes:
+            # n is a compressed node so find all the original nodes it is made of and assign them the same score
+            for orig_node in compressed_node_to_orig_nodes[n]:
+                orig_node_to_bc_score[orig_node] = compressed_graph_to_bc_score[n]    
+        else:
+            # Not a compressed node so just copy the BC score
+            orig_node_to_bc_score[n] = compressed_graph_to_bc_score[n]
+    
+    return orig_node_to_bc_score
