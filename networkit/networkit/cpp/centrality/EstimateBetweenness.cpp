@@ -26,7 +26,7 @@
 namespace NetworKit {
 
 EstimateBetweenness::EstimateBetweenness(const Graph& G, count nSamples, bool normalized, bool parallel_flag,
- unsigned seed, std::vector<size_t> sources, std::vector<size_t> targets) : Centrality(G, normalized), nSamples(nSamples), parallel_flag(parallel_flag), seed(seed), sources(sources), targets(targets) {
+ unsigned seed, std::vector<size_t> sources, std::vector<size_t> targets, std::vector<size_t> ident) : Centrality(G, normalized), nSamples(nSamples), parallel_flag(parallel_flag), seed(seed), sources(sources), targets(targets), ident(ident) {
 }
 
 void EstimateBetweenness::run() {
@@ -81,9 +81,10 @@ void EstimateBetweenness::run() {
         // run single-source shortest path algorithm
         std::unique_ptr<SSSP> sssp;
         if (G.isWeighted()) {
+            // Note: Ident has not been implemented for weighted graphs
             sssp = std::make_unique<Dijkstra>(G, s, true, true);
         } else {
-            sssp = std::make_unique<BFS>(G, s, true, true);
+            sssp = std::make_unique<BFS>(G, s, true, true, none, ident);
         }
         if (!handler.isRunning()) return;
         sssp->run();

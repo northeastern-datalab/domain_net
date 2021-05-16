@@ -1035,12 +1035,12 @@ cdef class DynAPSP(APSP):
 cdef extern from "<networkit/distance/BFS.hpp>":
 
 	cdef cppclass _BFS "NetworKit::BFS"(_SSSP):
-		_BFS(_Graph G, node source, bool_t storePaths, bool_t storeNodesSortedByDistance, node target) except +
+		_BFS(_Graph G, node source, bool_t storePaths, bool_t storeNodesSortedByDistance, node target, vector[size_t] ident) except +
 
 cdef class BFS(SSSP):
 	""" Simple breadth-first search on a Graph from a given source
 
-	BFS(G, source, storePaths=True, storeNodesSortedByDistance=False, target=None)
+	BFS(G, source, storePaths=True, storeNodesSortedByDistance=False, target=None, ident=None)
 
 	Create BFS for `G` and source node `source`.
 
@@ -1054,11 +1054,22 @@ cdef class BFS(SSSP):
 		store paths and number of paths?
 	target: node
 		terminate search when the target has been reached
+	ident: ident scores for each node. The list is indexed by the nodeID. Each node must have an ident value of at least 1.
+		If it is not initialized then every node has an ident score of 1
 	"""
 
-	def __cinit__(self, Graph G, source, storePaths=True, storeNodesSortedByDistance=False, target=none):
+	def __cinit__(self, Graph G, source, storePaths=True, storeNodesSortedByDistance=False, target=none, ident=None):
+
+		cdef vector[size_t] ident_vec
+		# Initialize ident
+		if ident is None:
+			print('Ident not specified, set to 1 for all nodes by default')
+			ident_vec = [1] * G.numberOfNodes()
+		else:
+			ident_vec = ident
+
 		self._G = G
-		self._this = new _BFS(G._this, source, storePaths, storeNodesSortedByDistance, target)
+		self._this = new _BFS(G._this, source, storePaths, storeNodesSortedByDistance, target, ident_vec)
 
 
 cdef extern from "<networkit/distance/Dijkstra.hpp>":

@@ -38,6 +38,51 @@ def betweeness_exact_df(G, normalized=True, quiet=False):
 
     return df
 
+def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000, source_target_nodes_list=None, ident=None, seed=0):
+    '''
+    Calculates the approximate betweenness centrality for every node in a networkx graph.
+    The computation is carried using networkit.
+
+    Arguments
+    -------
+        G (networkx graph): a networkx graph. Must be a bipartite graph with node types 'cell' and 'attr'
+
+        normalized (bool): specifies if the BC scores need to be normalized
+
+        quiet (bool): specifies if informational print statements are presented
+
+        num_samples (int): number of samples to be used in the approximate calculation of betweenness
+
+        source_target_nodes_list (list of int): a list of node IDs to be used as source and target nodes for the approximate BC computation.
+        If the list set to None then all nodes in the graph are used as source/target nodes
+
+        ident (list of int): a list of the ident values for each node in the graph.
+        The order of the list is the same as the order of the nodes in the graph
+
+        seed (int): seed used for sampling nodes for the approximate BC computation  
+
+    Returns
+    -------
+    A dataframe keyed by each node with a mapping to its respective 
+    'node_type' and exact 'betweenness_centrality' score
+    '''
+
+    G_nk = nk.nxadapter.nx2nk(G)
+    nx_to_nk_id_dict = dict((id, int_id) for (id, int_id) in zip(G.nodes(), range(G.number_of_nodes())))
+
+    # Construct the dataframe placeholder
+    df = pd.DataFrame()
+    df['node'] = list(nx_to_nk_id_dict.keys())
+
+    # Add node type as a column
+    node_types = [G.nodes[node]['type'] for node in df['node'].values]
+    df['node_type'] = node_types
+    df['approximate_betweenness_centrality'] = betweeness_approximate(
+        G_nk, normalized=normalized, num_samples=num_samples,
+        source_target_nodes_list=source_target_nodes_list, ident=ident, seed=seed, quiet=quiet)
+
+    return df
+
 
 def betweeness_exact(G, normalized=True, quiet=False):
     '''
@@ -68,7 +113,7 @@ def betweeness_exact(G, normalized=True, quiet=False):
 
     return betweeness_scores
 
-def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes_list=None, seed=0):
+def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes_list=None, ident=None, normalized=True, seed=0):
     '''
     Calculates an approximation the the betweenness scores for each node in networkit graph `G`
 
@@ -81,14 +126,33 @@ def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes
         source_target_nodes_list (list of int): a list of node IDs to be used as source and target nodes for the approximate BC computation.
         If the list set to None then all nodes in the graph are used as source/target nodes
 
+        ident (list of int): a list of the ident values for each node in the graph.
+        The order of the list is the same as the order of the nodes in the graph
+
+        normalized (bool): specifies if the BC scores need to be normalized
+
         seed (int): seed used for sampling nodes for the approximate BC computation
 
     Returns
     -------
     List of approximate betweenness scores for each node
     '''
+
+    if ident is None:
+        # If ident is not specified then every node has an ident value 1
+        ident = [1] * G.numberOfNodes()
+
     start = timer()
-    betweeness = nk.centrality.EstimateBetweenness(G, nSamples = num_samples, parallel=True, normalized=True, sources=source_target_nodes_list, targets=source_target_nodes_list, seed=seed).run()
+    betweeness = nk.centrality.EstimateBetweenness(
+        G,
+        nSamples = num_samples,
+        parallel=True,
+        normalized=normalized,
+        sources=source_target_nodes_list,
+        targets=source_target_nodes_list,
+        ident=ident,
+        seed=seed
+    ).run()
     approximate_betweeness_scores = betweeness.scores()
 
     if not quiet:

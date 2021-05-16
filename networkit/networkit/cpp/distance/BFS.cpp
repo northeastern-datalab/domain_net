@@ -12,8 +12,8 @@
 namespace NetworKit {
 
 BFS::BFS(const Graph &G, node source, bool storePaths,
-         bool storeNodesSortedByDistance, node target)
-    : SSSP(G, source, storePaths, storeNodesSortedByDistance, target) {}
+         bool storeNodesSortedByDistance, node target, std::vector<size_t> ident)
+    : SSSP(G, source, storePaths, storeNodesSortedByDistance, target), ident(ident) {}
 
 void BFS::run() {
     count z = G->upperNodeIdBound();
@@ -64,12 +64,13 @@ void BFS::run() {
                 ++reachedNodes;
                 if (storePaths) {
                     previous[v] = {u};
-                    npaths[v] = npaths[u];
+                    npaths[v] = npaths[u]*ident[u];
                 }
             } else if (storePaths && (distances[v] == distances[u] + 1.)) {
                 previous[v].push_back(u); // additional predecessor
-                npaths[v] += npaths[u]; // all the shortest paths to u are also
-                                        // shortest paths to v now
+
+                // All the shortest paths to u are also shortest paths to v now (also account the multiplicative factor of ident[u])
+                npaths[v] += npaths[u] * ident[u]; 
             }
         });
     }

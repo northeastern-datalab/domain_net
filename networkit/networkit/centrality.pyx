@@ -179,13 +179,13 @@ cdef class ApproxBetweenness(Centrality):
 cdef extern from "<networkit/centrality/EstimateBetweenness.hpp>":
 
 	cdef cppclass _EstimateBetweenness"NetworKit::EstimateBetweenness" (_Centrality):
-		_EstimateBetweenness(_Graph, count, bool_t, bool_t, unsigned, vector[size_t] sources_vec, vector[size_t] targets_vec) except +
+		_EstimateBetweenness(_Graph, count, bool_t, bool_t, unsigned, vector[size_t] sources_vec, vector[size_t] targets_vec, vector[size_t] ident) except +
 
 cdef class EstimateBetweenness(Centrality):
 	""" Estimation of betweenness centrality according to algorithm described in
 	Sanders, Geisberger, Schultes: Better Approximation of Betweenness Centrality
 
-	EstimateBetweenness(G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None)
+	EstimateBetweenness(G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None, ident=None)
 
 	The algorithm estimates the betweenness of all nodes, using weighting
 	of the contributions to avoid biased estimation. The run() method takes O(m)
@@ -210,13 +210,18 @@ cdef class EstimateBetweenness(Centrality):
 		node ids that will be considered as source nodes. If not specified all nodes are considered as source nodes
 	targets: list
 		node ids that will be considered as target nodes. If not specified all nodes are considered as target nodes
+	ident: list
+		ident scores for each node. The list is indexed by the nodeID. Each node must have an ident value of at least 1.
+		If it is not initialized then every node has an ident score of 1
+
 	"""
 
-	def __cinit__(self, Graph G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None):
+	def __cinit__(self, Graph G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None, ident=None):
 		self._G = G
 
 		cdef vector[size_t] sources_vec
 		cdef vector[size_t] targets_vec
+		cdef vector[size_t] ident_vec
 
 		# Initialize source nodes 
 		if sources is None:
@@ -234,8 +239,14 @@ cdef class EstimateBetweenness(Centrality):
 		else:
 			targets_vec = targets
 
+		# Initialize ident (ident must )
+		if ident is None:
+			print('Ident not specified, set to 1 for all nodes by default')
+			ident_vec = [1] * G.numberOfNodes()
+		else:
+			ident_vec = ident
 		
-		self._this = new _EstimateBetweenness(G._this, nSamples, normalized, parallel, seed, sources_vec, targets_vec)
+		self._this = new _EstimateBetweenness(G._this, nSamples, normalized, parallel, seed, sources_vec, targets_vec, ident_vec)
 
 cdef extern from "<networkit/centrality/KadabraBetweenness.hpp>":
 

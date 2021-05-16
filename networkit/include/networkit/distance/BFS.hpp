@@ -30,14 +30,19 @@ public:
      * @param storeNodesSortedByDistance Store a vector of nodes ordered in
      * increasing distance from the source.
      * @param target The target node.
+     * @param ident vector of the ident scores for each node in the graph
      */
     BFS(const Graph &G, node source, bool storePaths = true,
-        bool storeNodesSortedByDistance = false, node target = none);
+        bool storeNodesSortedByDistance = false, node target = none, std::vector<size_t> ident={});
 
     /**
      * Breadth-first search from @a source.
      */
     void run() override;
+
+private:
+    std::vector<size_t> ident;
+
 };
 } /* namespace NetworKit */
 #endif // NETWORKIT_DISTANCE_BFS_HPP_

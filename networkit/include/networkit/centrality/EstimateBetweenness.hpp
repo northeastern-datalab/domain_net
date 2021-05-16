@@ -37,8 +37,9 @@ public:
      * @param   seed            seed used for sampling of nodes
      * @param   sources        vector of the source nodes
      * @param   targets        vector of the target nodes
+     * @param   ident          vector of the ident scores for each node in the graph
      */
-     EstimateBetweenness(const Graph& G, count nSamples, bool normalized=false, bool parallel_flag=false, unsigned seed=0, std::vector<size_t> sources={}, std::vector<size_t> targets={});
+     EstimateBetweenness(const Graph& G, count nSamples, bool normalized=false, bool parallel_flag=false, unsigned seed=0, std::vector<size_t> sources={}, std::vector<size_t> targets={}, std::vector<size_t> ident={});
 
      /**
      * Computes betweenness estimation on the graph passed in constructor.
@@ -53,6 +54,7 @@ private:
     unsigned seed;
     std::vector<size_t> sources;
     std::vector<size_t> targets;
+    std::vector<size_t> ident;
 
 };
 
