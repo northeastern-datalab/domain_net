@@ -34,20 +34,6 @@ void EstimateBetweenness::run() {
 
     Aux::SignalHandler handler;
 
-    // std::cout << "seed: " << seed << "\n";
-    // std::cout << "list of sources: ";
-    // for (int i = 0; i < sources.size(); ++i) {
-    //     std::cout << sources[i] << ", ";
-    // }
-    // std::cout << "\n";
-
-    // std::cout << "list of targets: ";
-    // for (int i = 0; i < targets.size(); ++i) {
-    //     std::cout << targets[i] << ", ";
-    // }
-    // std::cout << "\n";
-
-
     // perform random.shuffle over the sources nodes vector
     std::mt19937_64 generator(seed);
     std::shuffle(sources.begin(), sources.end(), generator);
@@ -120,10 +106,10 @@ void EstimateBetweenness::run() {
                 bigfloat tmp = sssp->numberOfPaths(p);
                 double tmp_double;
                 tmp.ToDouble(tmp_double);
-                dependency[p] += (double(sssp->distance(p)) / sssp->distance(t)) * tmp_double * coeff;
+                dependency[p] += (double(sssp->distance(p)) / sssp->distance(t)) * tmp_double * coeff * ident[t];
             }
             if (t != s) {
-                scorePerThread[omp_get_thread_num()][t] += dependency[t];
+                scorePerThread[omp_get_thread_num()][t] += (dependency[t] * ident[s]);
             }
 
             // // OLD Implementation that does not consider source and target subsets
