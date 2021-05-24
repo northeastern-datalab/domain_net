@@ -38,7 +38,7 @@ def betweeness_exact_df(G, normalized=True, quiet=False):
 
     return df
 
-def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000, source_target_nodes_list=None, ident=None, seed=0):
+def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000, source_target_nodes_list=None, ident=None, seed=0, column_name='approximate_betweenness_centrality'):
     '''
     Calculates the approximate betweenness centrality for every node in a networkx graph.
     The computation is carried using networkit.
@@ -59,7 +59,9 @@ def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000
         ident (list of int): a list of the ident values for each node in the graph.
         The order of the list is the same as the order of the nodes in the graph
 
-        seed (int): seed used for sampling nodes for the approximate BC computation  
+        seed (int): seed used for sampling nodes for the approximate BC computation
+
+        column_name (str): name of the dataframe column where the BC scores are stored. By default it is "approximate_betweenness_centrality"
 
     Returns
     -------
@@ -77,7 +79,7 @@ def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000
     # Add node type as a column
     node_types = [G.nodes[node]['type'] for node in df['node'].values]
     df['node_type'] = node_types
-    df['approximate_betweenness_centrality'] = betweeness_approximate(
+    df[column_name] = betweeness_approximate(
         G_nk, normalized=normalized, num_samples=num_samples,
         source_target_nodes_list=source_target_nodes_list, ident=ident, seed=seed, quiet=quiet)
 
@@ -148,19 +150,22 @@ def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes
         nSamples = num_samples,
         parallel=True,
         normalized=normalized,
+        seed=seed,
         sources=source_target_nodes_list,
         targets=source_target_nodes_list,
         ident=ident,
-        seed=seed
     ).run()
     approximate_betweeness_scores = betweeness.scores()
 
     if not quiet:
+        elapsed_time = timer() - start
+        print('Elapsed Time:', elapsed_time, 'seconds')
+
         # Estimate betweenness O(m * num_samples) complexity
         num_computations_approx = G.numberOfEdges() * num_samples
 
         # Computation done per second
-        computations_per_second = "{:4e}".format(num_computations_approx / (timer()-start))
+        computations_per_second = "{:4e}".format(num_computations_approx / elapsed_time)
         print('Number of computations (i.e. edges*num_samples):', "{:.4e}".format(num_computations_approx))
         print(computations_per_second, 'computations per second\n')
 

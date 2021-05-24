@@ -62,8 +62,8 @@ def get_compressed_graph(G):
     Returns
     -------
     Returns two objects
-    1) The compressed graph as a networkx graph and a mapping of each compressed node
-    to the set of original nodes it is composed of. 
+    1) The compressed graph as a networkx graph
+    2) A mapping of each compressed node to the set of original nodes it is composed of. 
     '''
     G = copy.deepcopy(G)
 
