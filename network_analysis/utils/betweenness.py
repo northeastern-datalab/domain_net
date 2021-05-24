@@ -38,7 +38,7 @@ def betweeness_exact_df(G, normalized=True, quiet=False):
 
     return df
 
-def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000, source_target_nodes_list=None, ident=None, seed=0, column_name='approximate_betweenness_centrality'):
+def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000, source_target_nodes_list=None, ident=None, weightedSampling=False, seed=0, column_name='approximate_betweenness_centrality'):
     '''
     Calculates the approximate betweenness centrality for every node in a networkx graph.
     The computation is carried using networkit.
@@ -58,6 +58,10 @@ def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000
 
         ident (list of int): a list of the ident values for each node in the graph.
         The order of the list is the same as the order of the nodes in the graph
+
+        weightedSampling (bool): bool, optional
+		If specified uses the `ident` list to perform weighted sampling without replacement over the source nodes.
+		The `ident` and `sources` lists must of of the same	size and must have the same index mapping (i.e. ident[3] corresponds to the ident value of node with ID sources[3]) 
 
         seed (int): seed used for sampling nodes for the approximate BC computation
 
@@ -81,7 +85,7 @@ def betweenness_approximate_df(G, normalized=True, quiet=False, num_samples=5000
     df['node_type'] = node_types
     df[column_name] = betweeness_approximate(
         G_nk, normalized=normalized, num_samples=num_samples,
-        source_target_nodes_list=source_target_nodes_list, ident=ident, seed=seed, quiet=quiet)
+        source_target_nodes_list=source_target_nodes_list, ident=ident, weightedSampling=weightedSampling, seed=seed, quiet=quiet)
 
     return df
 
@@ -115,7 +119,7 @@ def betweeness_exact(G, normalized=True, quiet=False):
 
     return betweeness_scores
 
-def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes_list=None, ident=None, normalized=True, seed=0):
+def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes_list=None, ident=None, weightedSampling=False, normalized=True, seed=0):
     '''
     Calculates an approximation the the betweenness scores for each node in networkit graph `G`
 
@@ -130,6 +134,10 @@ def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes
 
         ident (list of int): a list of the ident values for each node in the graph.
         The order of the list is the same as the order of the nodes in the graph
+
+        weightedSampling (bool): bool, optional
+		If specified uses the `ident` list to perform weighted sampling without replacement over the source nodes.
+		The `ident` and `sources` lists must of of the same	size and must have the same index mapping (i.e. ident[3] corresponds to the ident value of node with ID sources[3]) 
 
         normalized (bool): specifies if the BC scores need to be normalized
 
@@ -154,6 +162,7 @@ def betweeness_approximate(G, num_samples=5000, quiet=False, source_target_nodes
         sources=source_target_nodes_list,
         targets=source_target_nodes_list,
         ident=ident,
+        weightedSampling=weightedSampling
     ).run()
     approximate_betweeness_scores = betweeness.scores()
 

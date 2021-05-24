@@ -21,22 +21,71 @@
 #include <iostream>
 #include <random>
 #include <algorithm>
+#include <map>
 
 
 namespace NetworKit {
 
 EstimateBetweenness::EstimateBetweenness(const Graph& G, count nSamples, bool normalized, bool parallel_flag,
- unsigned seed, std::vector<size_t> sources, std::vector<size_t> targets, std::vector<size_t> ident) : Centrality(G, normalized), nSamples(nSamples), parallel_flag(parallel_flag), seed(seed), sources(sources), targets(targets), ident(ident) {
+ unsigned seed, std::vector<size_t> sources, std::vector<size_t> targets, std::vector<size_t> ident, bool weightedSampling) : 
+ Centrality(G, normalized), nSamples(nSamples), parallel_flag(parallel_flag), seed(seed), sources(sources), targets(targets), ident(ident), weightedSampling(weightedSampling){
 }
+
+/**
+ * Given a vector of source nodes and an ident vector sample 'nSamples' nodes
+ * 
+ * Related resource for weighted random sampling: https://stackoverflow.com/questions/1761626/weighted-random-numbers
+ * 
+ * Returns a vector of the sampled nodes
+ */
+std::vector<node> EstimateBetweenness::get_node_samples(const std::vector<size_t>& sources, const std::vector<size_t>& ident, const count nSamples, unsigned seed, bool weightedSampling) {
+    // There should be a one to one mapping between the sources vector and the ident vector
+    assert(sources.size() == ident.size());
+
+    // Vector of node IDs to be returned as the sampled nodes
+    std::vector<node> sampledNodes;
+
+    if (sources.size() == nSamples) {
+        // Special case when the nSamples equal to the number of nodes in the 'sources' vector
+        // No need to perform any random sampling
+        sampledNodes = sources;
+        return sampledNodes;
+    }
+
+    std::mt19937 gen(seed);    
+    if (weightedSampling) {
+        // Perform weighted random sampling without replacement
+        std::vector<size_t> cur_ident_vec(ident);
+
+        while (sampledNodes.size() < nSamples) {
+            // Update distribution to the latest 'cur_ident_vec'
+            std::discrete_distribution<size_t> dist(cur_ident_vec.begin(), cur_ident_vec.end());
+
+            size_t selected_id = dist(gen);
+            sampledNodes.push_back((node)sources[selected_id]);
+
+            // Set 0 to the 'selected_id' index in the cur_ident_vec, because we have already selected that node_id
+            cur_ident_vec[selected_id] = 0;
+        }
+    }
+    else {
+        // Perform unweighted random sampling
+        std::vector<size_t> sources_tmp = sources;
+        std::shuffle(sources_tmp.begin(), sources_tmp.end(), gen);
+        // Select the first nSamples nodes from target_nodes
+        for (count i = 0; i < nSamples; ++i) {
+            sampledNodes.push_back((node)sources_tmp[i]);
+        }
+    }
+
+    return sampledNodes;
+}
+
 
 void EstimateBetweenness::run() {
     hasRun = false;
 
     Aux::SignalHandler handler;
-
-    // perform random.shuffle over the sources nodes vector
-    std::mt19937_64 generator(seed);
-    std::shuffle(sources.begin(), sources.end(), generator);
 
     // Ensure that the number of samples is less that the possible source nodes
     if (nSamples > sources.size()) {
@@ -44,18 +93,10 @@ void EstimateBetweenness::run() {
         exit(1);
     }
 
-    // Select the first nSamples nodes from target_nodes
-    std::vector<node> sampledNodes;
-    for (count i = 0; i < nSamples; ++i) {
-        sampledNodes.push_back((node)sources[i]);
-    }
-
-    // std::cout << "list of samples: ";
-    // for (int i = 0; i < sampledNodes.size(); ++i) {
-    //     std::cout << sampledNodes[i] << ", ";
-    // }
-    // std::cout << "\n";
-
+    // Sample 'nSamples' from the list of 'sources' nodes
+    // TODO: Track how long the sampling process takes
+    std::vector<node> sampledNodes = get_node_samples(sources, ident, nSamples, seed, weightedSampling);
+    
 
     // thread-local scores for efficient parallelism
     count maxThreads = omp_get_max_threads();

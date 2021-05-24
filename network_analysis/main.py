@@ -66,9 +66,7 @@ def get_num_samples(G, sampling_percentage):
     return num_samples
 
 
-
-
-def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_samples, sampling_percentage, source_target_nodes, seed, node_compression):
+def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_samples, sampling_percentage, source_target_nodes, seed, node_compression, weighted_sampling):
     '''
     Returns a pandas dataframe of relevant statistical measurements for the input graph `G`
     Each row corresponds to one node in the graph.
@@ -98,6 +96,9 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
 
         node_compression (boolean): if true then find set of cell nodes that co-occur with the same set of attribute nodes
         and compress these cell nodes into a single compressed node
+
+        weightedSampling (bool): bool, optional
+		If specified uses the `ident` list to perform weighted sampling without replacement over the source nodes.
        
     Returns
     -------
@@ -120,6 +121,7 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
             num_samples = get_num_samples(G_nx_compressed, sampling_percentage)
             print("Sampling", num_samples, "nodes from the compressed graph\n")
 
+        assert (source_target_nodes == 'all'), "Node compression only supported when using 'all' nodes as source/target nodes"
         source_target_nodes_list = get_source_target_nodes_list(G_nx, source_target_nodes)
 
         df = utils.betweenness.betweenness_approximate_df(
@@ -129,12 +131,14 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
             num_samples=num_samples,
             source_target_nodes_list=source_target_nodes_list,
             ident=list(ident_dict.values()),
-            seed=seed
+            seed=seed,
+            weightedSampling=weighted_sampling
         )
     else:
         # Use the full graph to run BC
         if sampling_percentage:
             num_samples = get_num_samples(G_nx, sampling_percentage)
+            print("Sampling", num_samples, "nodes from the graph\n")
 
         source_target_nodes_list = get_source_target_nodes_list(G_nx, source_target_nodes)
 
@@ -363,7 +367,8 @@ def main(args):
             sampling_percentage=args.sampling_percentage,
             source_target_nodes = args.betweenness_source_target_nodes,
             seed = args.seed,
-            node_compression=args.node_compression
+            node_compression=args.node_compression,
+            weighted_sampling=args.weighted_sampling
         )
         
         # Save the dataframe to file
@@ -481,6 +486,11 @@ if __name__ == "__main__":
     help="Specifies the percentage of the graph's nodes used for sampling when computing approximate BC. \
         Must be a value in the range (0, 100]")
 
+    # Only to be used if --node_compression is specified. If selected it uses the `ident` list to perform weighted sampling without replacement over the source nodes.
+    parser.add_argument('--weighted_sampling', action='store_true',
+    help="Only to be used if --node_compression is specified. \
+        If selected it uses the `ident` list to perform weighted sampling without replacement over the source nodes.")
+
     # Parse the arguments
     args = parser.parse_args()
 
@@ -493,6 +503,8 @@ if __name__ == "__main__":
         parser.error('sampling_percentage must be in the range (0, 100]')
     if args.node_compression and not args.sampling_percentage:
         parser.error('When using node_compression, specify a sampling_percentage instead of num_samples')
+    if args.weighted_sampling and not args.node_compression:
+        parser.error('weighted_sampling can only be used with node_compression. Need to specify the --node_compression option')
     
     print('##### ----- Running network_analysis/main.py with the following parameters ----- #####\n')
 
@@ -513,6 +525,8 @@ if __name__ == "__main__":
         print('Using collapsed graph for analysis')
     if args.node_compression:
         print('Using node compression for BC computation')
+    if args.weighted_sampling:
+        print('Sampling using weighted random sampling without replacement')
     print()
     if args.perform_cleaning:
         print('Cleaning is set: ON')

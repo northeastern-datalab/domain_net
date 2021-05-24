@@ -179,13 +179,13 @@ cdef class ApproxBetweenness(Centrality):
 cdef extern from "<networkit/centrality/EstimateBetweenness.hpp>":
 
 	cdef cppclass _EstimateBetweenness"NetworKit::EstimateBetweenness" (_Centrality):
-		_EstimateBetweenness(_Graph, count, bool_t, bool_t, unsigned, vector[size_t] sources_vec, vector[size_t] targets_vec, vector[size_t] ident) except +
+		_EstimateBetweenness(_Graph, count, bool_t, bool_t, unsigned, vector[size_t] sources_vec, vector[size_t] targets_vec, vector[size_t] ident, bool_t) except +
 
 cdef class EstimateBetweenness(Centrality):
 	""" Estimation of betweenness centrality according to algorithm described in
 	Sanders, Geisberger, Schultes: Better Approximation of Betweenness Centrality
 
-	EstimateBetweenness(G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None, ident=None)
+	EstimateBetweenness(G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None, ident=None, weightedSampling=False)
 
 	The algorithm estimates the betweenness of all nodes, using weighting
 	of the contributions to avoid biased estimation. The run() method takes O(m)
@@ -212,11 +212,14 @@ cdef class EstimateBetweenness(Centrality):
 		node ids that will be considered as target nodes. If not specified all nodes are considered as target nodes
 	ident: list
 		ident scores for each node. The list is indexed by the nodeID. Each node must have an ident value of at least 1.
-		If it is not initialized then every node has an ident score of 1
+		If it is not initialized then every node has an ident score of 1 by default.
+	weightedSampling : bool, optional
+		If specified uses the `ident` list to perform weighted sampling without replacement over the source nodes.
+		The `ident` and `sources` lists must of of the same	size and must have the same index mapping (i.e. ident[3] corresponds to the ident value of node with ID sources[3]) 
 
 	"""
 
-	def __cinit__(self, Graph G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None, ident=None):
+	def __cinit__(self, Graph G, nSamples, normalized=False, parallel=False, seed=0, sources=None, targets=None, ident=None, weightedSampling=False):
 		self._G = G
 
 		cdef vector[size_t] sources_vec
@@ -245,8 +248,11 @@ cdef class EstimateBetweenness(Centrality):
 			ident_vec = [1] * G.numberOfNodes()
 		else:
 			ident_vec = ident
+
+		if weightedSampling:
+			print('Sampling using weighted random sampling without replacement')
 		
-		self._this = new _EstimateBetweenness(G._this, nSamples, normalized, parallel, seed, sources_vec, targets_vec, ident_vec)
+		self._this = new _EstimateBetweenness(G._this, nSamples, normalized, parallel, seed, sources_vec, targets_vec, ident_vec, weightedSampling)
 
 cdef extern from "<networkit/centrality/KadabraBetweenness.hpp>":
 

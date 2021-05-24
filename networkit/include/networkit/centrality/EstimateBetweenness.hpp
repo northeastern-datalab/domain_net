@@ -38,8 +38,9 @@ public:
      * @param   sources        vector of the source nodes
      * @param   targets        vector of the target nodes
      * @param   ident          vector of the ident scores for each node in the graph
+     * @param   weightedSampling if true, uses the ident vector to perform weighted sampling without replacement from the 'sources' list
      */
-     EstimateBetweenness(const Graph& G, count nSamples, bool normalized=false, bool parallel_flag=false, unsigned seed=0, std::vector<size_t> sources={}, std::vector<size_t> targets={}, std::vector<size_t> ident={});
+     EstimateBetweenness(const Graph& G, count nSamples, bool normalized=false, bool parallel_flag=false, unsigned seed=0, std::vector<size_t> sources={}, std::vector<size_t> targets={}, std::vector<size_t> ident={}, bool weightedSampling=false);
 
      /**
      * Computes betweenness estimation on the graph passed in constructor.
@@ -55,6 +56,9 @@ private:
     std::vector<size_t> sources;
     std::vector<size_t> targets;
     std::vector<size_t> ident;
+    bool weightedSampling;
+
+    std::vector<node> get_node_samples(const std::vector<size_t>& sources, const std::vector<size_t>& ident, const count nSamples, unsigned seed, bool weightedSampling);
 
 };
 
