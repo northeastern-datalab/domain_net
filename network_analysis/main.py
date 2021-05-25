@@ -107,14 +107,25 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
     '''
     print('Input graph has:', G_nx.number_of_nodes(), 'nodes and', G_nx.number_of_edges(), 'edges\n')
 
+    # Dictionary keeping track of relevant statistics
+    statistics = {}
+    statistics['num_nodes'] = G_nx.number_of_nodes()
+    statistics['num_edges'] = G_nx.number_of_edges()
+
     # Run BC using the compressed graph
     if node_compression:
+        start = timer()
         G_nx_compressed, compressed_node_to_orig_nodes = utils.graph_collapsing.get_compressed_graph(G_nx)
         print("\nCompressed graph has", G_nx_compressed.number_of_nodes(), 'nodes and', G_nx_compressed.number_of_edges(), 'edges.')
+        statistics['compression_time'] = timer()-start
 
         # Get the ident_dict for the compressed graph
         ident_dict = utils.graph_collapsing.get_ident_dict(G_nx_compressed, compressed_node_to_orig_nodes)
         print("There are", len(compressed_node_to_orig_nodes), 'compressed nodes')
+
+        statistics['compressed_graph_num_nodes'] = G_nx_compressed.number_of_nodes()
+        statistics['compressed_graph_num_edges'] = G_nx_compressed.number_of_edges()
+        statistics['num_compressed_nodes'] = len(compressed_node_to_orig_nodes)
 
         # Choose the number of samples over the compressed graph
         if sampling_percentage:
@@ -124,7 +135,8 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
         assert (source_target_nodes == 'all'), "Node compression only supported when using 'all' nodes as source/target nodes"
         source_target_nodes_list = get_source_target_nodes_list(G_nx, source_target_nodes)
 
-        df = utils.betweenness.betweenness_approximate_df(
+        start = timer()
+        df_compressed = utils.betweenness.betweenness_approximate_df(
             G=G_nx_compressed,
             normalized=True,
             quiet=False,
@@ -132,8 +144,19 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
             source_target_nodes_list=source_target_nodes_list,
             ident=list(ident_dict.values()),
             seed=seed,
+            column_name='approximate_betweenness_centrality',
             weightedSampling=weighted_sampling
         )
+        statistics['bc_time'] = timer()-start
+
+        # Decompress the dataframe so that each row corresponds to a single node
+        df = pd.DataFrame()
+        df['node'] = list(G_nx.nodes)
+        node_types = [G_nx.nodes[node]['type'] for node in df['node'].values]
+        df['node_type'] = node_types
+        bc_compressed = pd.Series(df_compressed.approximate_betweenness_centrality.values,index=df_compressed.node).to_dict()
+        bc_decompressed = utils.graph_collapsing.get_bc_scores_of_original_graph(compressed_graph_to_bc_score=bc_compressed, compressed_node_to_orig_nodes=compressed_node_to_orig_nodes)
+        df['approximate_betweenness_centrality'] = df['node'].map(bc_decompressed)
     else:
         # Use the full graph to run BC
         if sampling_percentage:
@@ -141,9 +164,9 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
             print("Sampling", num_samples, "nodes from the graph\n")
 
         source_target_nodes_list = get_source_target_nodes_list(G_nx, source_target_nodes)
-
         df = pd.DataFrame()
 
+        start = timer()
         if computation_mode == "exact" or computation_mode == "all":
             print("Computing exact BC scores...")
             df = utils.betweenness.betweenness_approximate_df(
@@ -171,8 +194,12 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
                 df = df_approx
             else:
                 df['approximate_betweenness_centrality'] = df_approx['approximate_betweenness_centrality']
+        statistics['bc_time'] = timer()-start
 
-    print(df)
+    # Save relevant statistics data to the output_dir
+    with open(output_dir + 'statistics.json', 'w') as fp:
+        json.dump(statistics, fp, sort_keys=True, indent=4)
+
     return df 
     
     
