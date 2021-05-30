@@ -149,6 +149,13 @@ def get_graph_statistics_networkit(G_nx, output_dir, computation_mode, num_sampl
         )
         statistics['bc_time'] = timer()-start
 
+        # Save df_compressed and its related metadata to output_dir
+        Path(output_dir+'compression_metadata/').mkdir(parents=True, exist_ok=True)
+        df_compressed.to_pickle(output_dir+'compression_metadata/' + 'df_compressed.pickle')
+        with open(output_dir+'compression_metadata/compressed_node_to_orig_nodes.pickle', 'wb') as handle:
+            pickle.dump(compressed_node_to_orig_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
         # Decompress the dataframe so that each row corresponds to a single node
         df = pd.DataFrame()
         df['node'] = list(G_nx.nodes)
@@ -547,7 +554,7 @@ if __name__ == "__main__":
     if args.num_samples:
         print('Number of samples:', args.num_samples)
     if args.sampling_percentage:
-        print('Sampling', args.sampling_percentage, ' percent of the nodes')
+        print('Sampling', args.sampling_percentage, 'percent of the nodes')
     if args.collapsed_graph:
         print('Using collapsed graph for analysis')
     if args.node_compression:
