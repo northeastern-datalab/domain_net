@@ -6,6 +6,7 @@ import argparse
 import pickle
 import json
 import utils
+import operator
 
 from timeit import default_timer as timer
 from pathlib import Path
@@ -29,6 +30,8 @@ def get_initial_lists(df, top_perc=10.0, bottom_perc=10.0):
     marked_homographs list, marked_unambiguous_values list
     '''
     num_unique_ranks = df['dense_rank'].nunique()
+    print('There are', num_unique_ranks, 'unique ranks based on BC.')
+
     homograph_rank_threshold = (top_perc/100) * num_unique_ranks
     unambiguous_rank_threshold = num_unique_ranks - ((bottom_perc/100) * num_unique_ranks)
 
@@ -67,6 +70,23 @@ def process_df(df, G):
 
     return df
 
+def same_types(attrs, attr_to_type):
+    '''
+    Given a list of `attrs` find if they all map to the same type.
+    If they all map to an uninitialized value (i.e. -1) then return False.
+    '''
+    types = {attr_to_type[attr] for attr in attrs}
+    
+    if (len(types) > 1):
+        return False
+    else:
+        # There is a single type, check if it is uninitialized (i.e. a negative number)
+        if (list(types)[0] < 0):
+            return False
+        else:
+            # Only a single type and it is initialized
+            return True
+
 def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
     '''
     Arguments
@@ -83,23 +103,76 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
     -------
     Nothing
     '''
-
     attr_nodes = [n for n, d in G.nodes(data=True) if d['type']=='attr']
 
     # Each attribute is initialized to map to node type -1 (i.e. uninitialized) 
     attr_to_type = {n: -1 for n in attr_nodes}
+
+    next_available_type = 1     # Next available type ID to assign for a new attribute type
     
-    # Propagate unambiguous values
+    ######----- Propagate unambiguous values -----######
     for val in marked_unambiguous_values:
         attrs_of_val = utils.graph_helpers.get_attribute_of_instance(G, val)
 
-        # Check if the types all attrs are already the same
-        if (False):
+        # Check if all attributes of the current value already have the same type
+        if (same_types(attrs_of_val, attr_to_type)):
+            # No need to change anything
             pass
         else:
-            for attr in attrs_of_val:
-                if attr_to_type[attr] < 0:
+            # Assign a type to each attribute in `attrs_of_val` if there isn't one available
+            cur_max_type = max({attr_to_type[attr] for attr in attrs_of_val})
+            if (cur_max_type > 0):
+                # Assign every attribute in `attrs_of_val` to `cur_max_type`
+                for attr in attrs_of_val:
+                    attr_to_type[attr]=cur_max_type 
+            else:
+                # Assign every attribute in `attrs_of_val` to `next_available_type` and increment it
+                for attr in attrs_of_val:
+                    attr_to_type[attr]=next_available_type
+                next_available_type+=1
+
+    ######----- Propagate homographs -----######
+
+    # Map each marked homograph to the number of attribute nodes it is connected to and sort the dictionary by value (low to high)
+    marked_homograph_to_num_attrs_dict = {hom: len(utils.graph_helpers.get_attribute_of_instance(G, hom)) for hom in marked_homographs}
+    marked_homograph_to_num_attrs_dict = {k: v for k, v in sorted(marked_homograph_to_num_attrs_dict.items(), key=lambda item: item[1])}
+    for hom in marked_homograph_to_num_attrs_dict.keys():
+        attrs_of_hom = utils.graph_helpers.get_attribute_of_instance(G, hom)
+        
+        if len(attrs_of_hom) == 2:
+            # Only two attributes connected to the current homograph so assign a different type to each one
+            if (attr_to_type[attrs_of_hom[0]] == attr_to_type[attrs_of_hom[1]]):
+                # The two attributes have the same type (change one of them, or both they are uninitialized)
+                if attr_to_type[attrs_of_hom[0]] < 0:
+                    # Types for both attributes are not initialized
+                    attr_to_type[attrs_of_hom[0]]=next_available_type
+                    next_available_type += 1
+                    attr_to_type[attrs_of_hom[1]]=next_available_type
+                    next_available_type += 1
+                else:
+                    # Types for the two attributes are the same
+                    attr_to_type[attrs_of_hom[0]]=next_available_type
+                    next_available_type += 1
+            else:
+                # The two attributes have different types (if one an attribute has an uninitialized type, initialize it)
+                if attr_to_type[attrs_of_hom[0]] < 0:
+                    attr_to_type[attrs_of_hom[0]]=next_available_type
+                    next_available_type += 1
+                elif attr_to_type[attrs_of_hom[1]] < 0:
+                    attr_to_type[attrs_of_hom[1]]=next_available_type
+                    next_available_type += 1
+                else:
+                    # Do nothing, the are already of different types and initialized
                     pass
+        else:
+            # Perform some sort of random assignment of types
+            pass
+
+    
+    # TODO: Check for constraint violations
+
+    # TODO: Loop over remaining cell nodes not in `marked_homographs` and `marked_unambiguous_values` and propagate semantic types based on current information
+
 
 
 def main(args): 
