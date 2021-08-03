@@ -52,8 +52,6 @@ def process_df(df, G):
         df (pandas dataframe): dataframe with BC for each node in the graph 
 
         G (networkx graph): Input graph corresponding to the dataframe
-
-        bottom (float): bottom percentage of ranks that are marked as unambiguous values
        
     Returns
     -------
@@ -380,6 +378,28 @@ def get_attribute_types_of_cell_node(G, cell_node, attr_to_type):
     attr_types = {attr:attr_to_type[attr] for attr in attrs_of_cell_node}
     return attr_types
 
+def get_marked_nodes_from_file(file_path):
+    '''
+    Given the JSON file path that specifies what nodes are marked return
+    the `marked_homographs` and the `marked_unambiguous_values`.
+
+    If the `marked_unambiguous_values` are not specified in the JSON then select the bottom `X` percent
+    nodes based on BC that are neighbors of the `marked_homographs`
+    '''
+
+    # The selected nodes are specified by provided JSON file
+    with open(file_path) as json_file:
+        json_dict = json.load(json_file)
+
+    marked_homographs = json_dict['marked_homographs']
+    if ('marked_unambiguous_values' not in json_dict) or (len(json_dict['marked_unambiguous_values']) == 0):
+        marked_unambiguous_values = json_dict['marked_unambiguous_values']
+    else:
+        # Find neighboring cell nodes for each `marked_homograph` and
+        # select the bottom `X` percent of them based on their BC scores
+        pass
+
+    return marked_homographs, marked_unambiguous_values
 
 def main(args): 
     # Load the graph file
@@ -395,13 +415,17 @@ def main(args):
     df = pickle.load(open(args.dataframe, 'rb'))
     df = process_df(df, graph)
 
-    # Get initial lists of homographs and unambiguous nodes by extacting the top and bottom nodes in the BC rankings
-    # TODO: allow for custom homograph and unambiguous values lists
-    marked_homographs, marked_unambiguous_values = get_initial_lists(
-        df=df, 
-        top_perc=15.0,
-        bottom_perc=40.0
-    )
+    # Select the marked homographs and unambiguous values
+    if args.input_nodes:
+        get_marked_nodes_from_file(args.input_nodes)
+    else:
+        # Get initial lists of homographs and unambiguous nodes by extacting the top and bottom nodes in the BC rankings
+        marked_homographs, marked_unambiguous_values = get_initial_lists(
+            df=df, 
+            top_perc=15.0,
+            bottom_perc=40.0
+        )
+
     print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
         len(marked_unambiguous_values), 'cell nodes marked as unambiguous values.')
     print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
@@ -443,6 +467,14 @@ if __name__ == "__main__":
     parser.add_argument('--seed', metavar='seed', type=int,
     help='Seed used for the random sampling used by the approximate betweenness centrality algorithm')
 
+    parser.add_argument('--input_nodes', metavar='input_nodes',
+    help='Path to the JSON file that specifies the input homograph and/or unambiguous values to be used for propagation. \
+    If a file is not provided then the top and bottom cell nodes ranked by their BC scores are selected as the \
+    marked homographs and unambiguous values respectively.')
+
+    # parser.add_argument('--mode', metavar='mode', choices=['single', 'multiple'], default='single',
+    # help='Specifies if we want to find the number ')
+
     # Parse the arguments
     args = parser.parse_args()
 
@@ -453,6 +485,7 @@ if __name__ == "__main__":
     print('Output directory:', args.output_dir)
     print('Graph path:', args.graph)
     print('DataFrame path:', args.dataframe)
+    print('Input Nodes Path:', args.input_nodes)
     
     if args.seed:   
         print('User specified seed:', args.seed)
