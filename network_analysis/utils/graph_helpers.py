@@ -35,3 +35,14 @@ def get_cardinality_of_homograph(G, val):
     for attr in attribute_nodes:
         cell_vals |= set(get_instances_for_attribute(G, attr))
     return len(cell_vals)
+
+def get_cell_node_neighbors(G, cell_node):
+    '''
+    Given a graph `G` and a `cell_node` return all its cell node neighbors.
+    The cell node neighbors of a node are all the cell nodes connected that are connected to its attribute nodes
+    '''
+    attribute_nodes = get_attribute_of_instance(G, cell_node)
+    cell_vals = set()
+    for attr in attribute_nodes:
+        cell_vals |= set(get_instances_for_attribute(G, attr))
+    return list(cell_vals)

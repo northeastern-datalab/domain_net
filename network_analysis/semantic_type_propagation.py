@@ -14,7 +14,7 @@ from timeit import default_timer as timer
 from pathlib import Path
 from tqdm import tqdm
 
-def get_initial_lists(df, top_perc=10.0, bottom_perc=10.0):
+def get_marked_nodes(df, top_perc=10.0, bottom_perc=10.0):
     '''
     Returns two lists. The cell values in the `top_perc` percentage ranks are marked as homographs
     and the cell values in the `bottom_perc` percentage ranks that are are marked as unambiguous values
@@ -32,7 +32,6 @@ def get_initial_lists(df, top_perc=10.0, bottom_perc=10.0):
     marked_homographs list, marked_unambiguous_values list
     '''
     num_unique_ranks = df['dense_rank'].nunique()
-    print('There are', num_unique_ranks, 'unique ranks based on BC.')
 
     homograph_rank_threshold = (top_perc/100) * num_unique_ranks
     unambiguous_rank_threshold = num_unique_ranks - ((bottom_perc/100) * num_unique_ranks)
@@ -67,6 +66,9 @@ def process_df(df, G):
     # Perform dense ranking on the BC column for all remaining nodes
     df['dense_rank'] = df['betweenness_centrality'].rank(method='dense', ascending=False)
     df.sort_values(by='betweenness_centrality', ascending=False, inplace=True)
+
+    num_unique_ranks = df['dense_rank'].nunique()
+    print('There are', num_unique_ranks, 'unique ranks based on BC.')
 
     return df
 
@@ -378,27 +380,52 @@ def get_attribute_types_of_cell_node(G, cell_node, attr_to_type):
     attr_types = {attr:attr_to_type[attr] for attr in attrs_of_cell_node}
     return attr_types
 
-def get_marked_nodes_from_file(file_path):
+def get_marked_nodes_from_file(file_path, df, G):
     '''
     Given the JSON file path that specifies what nodes are marked return
     the `marked_homographs` and the `marked_unambiguous_values`.
 
     If the `marked_unambiguous_values` are not specified in the JSON then select the bottom `X` percent
     nodes based on BC that are neighbors of the `marked_homographs`
+
+    Arguments
+    -------
+        file_path (str): a string to the file_path that specifies the marked nodes 
+
+        df (pandas dataframe): pandas dataframe with the BC score for each node in the graph
+
+        G (networkx graph): The graph representation of the input dataset 
+
+    Returns
+    -------
+    Returns two lists, a list of the marked homographs and a list of the 
+    marked unambiguous values 
     '''
+
+    print('\nExtracting the marked nodes from file...')
 
     # The selected nodes are specified by provided JSON file
     with open(file_path) as json_file:
         json_dict = json.load(json_file)
 
     marked_homographs = json_dict['marked_homographs']
-    if ('marked_unambiguous_values' not in json_dict) or (len(json_dict['marked_unambiguous_values']) == 0):
-        marked_unambiguous_values = json_dict['marked_unambiguous_values']
-    else:
-        # Find neighboring cell nodes for each `marked_homograph` and
-        # select the bottom `X` percent of them based on their BC scores
-        pass
+    assert len(marked_homographs) > 0, 'There should be at least one value in the marked_homographs list'
 
+    if ('marked_unambiguous_values' not in json_dict) or (len(json_dict['marked_unambiguous_values']) == 0):
+        # Find neighboring cell nodes for each `marked_homograph`
+        marked_unambiguous_values = []
+        for hom in marked_homographs:
+            cell_node_neighbors = utils.graph_helpers.get_cell_node_neighbors(G, hom)
+
+            # Limit the df to only those nodes and extract the bottom `X` percent of them based on their BC scores
+            df_tmp = df[df['node'].isin(cell_node_neighbors)]
+            df_tmp = process_df(df_tmp, G)
+            _, unambiguous_values = get_marked_nodes(df_tmp, bottom_perc=10)
+            marked_unambiguous_values += unambiguous_values
+    else:
+        marked_unambiguous_values = json_dict['marked_unambiguous_values']
+
+    print('Finished extracting the marked nodes from file\n')
     return marked_homographs, marked_unambiguous_values
 
 def main(args): 
@@ -417,10 +444,10 @@ def main(args):
 
     # Select the marked homographs and unambiguous values
     if args.input_nodes:
-        get_marked_nodes_from_file(args.input_nodes)
+        marked_homographs, marked_unambiguous_values = get_marked_nodes_from_file(args.input_nodes, df, graph)
     else:
         # Get initial lists of homographs and unambiguous nodes by extacting the top and bottom nodes in the BC rankings
-        marked_homographs, marked_unambiguous_values = get_initial_lists(
+        marked_homographs, marked_unambiguous_values = get_marked_nodes(
             df=df, 
             top_perc=15.0,
             bottom_perc=40.0
@@ -430,6 +457,8 @@ def main(args):
         len(marked_unambiguous_values), 'cell nodes marked as unambiguous values.')
     print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
     print('Marked Unambiguous values precision:', get_precision(df, marked_unambiguous_values, is_homograph=False), '\n')
+
+    exit()
 
     # Perform the Propagation
     attr_to_type = type_propagation(df, graph, marked_homographs, marked_unambiguous_values)
