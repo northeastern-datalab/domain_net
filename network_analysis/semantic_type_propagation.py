@@ -458,8 +458,6 @@ def main(args):
     print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
     print('Marked Unambiguous values precision:', get_precision(df, marked_unambiguous_values, is_homograph=False), '\n')
 
-    exit()
-
     # Perform the Propagation
     attr_to_type = type_propagation(df, graph, marked_homographs, marked_unambiguous_values)
 
