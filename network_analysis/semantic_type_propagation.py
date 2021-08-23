@@ -97,7 +97,9 @@ def get_valid_assignments(attr_of_hom_to_type, next_available_type):
 
     Arguments
     -------
-        attr_of_hom_to_type (dict): Maps the attribute nodes of the homograph to their assigned type 
+        attr_of_hom_to_type (dict): Maps the attribute nodes of the homograph to their assigned type
+
+        next_available_type (int): The next freely available type to assign to an attribute 
     '''
     # Find the set of types that can be assigned to attributes that have not been assigned a type yet
     assignable_types = set()
@@ -113,7 +115,7 @@ def get_valid_assignments(attr_of_hom_to_type, next_available_type):
     if num_of_attrs_without_type > 0:
         # Need to assign a type to at least one attribute node
 
-        # If `num_of_attrs_without_type` is very large it may be wise to put a hard-cap to limit exponential growth of possibilities (currently set to 3) 
+        # If `num_of_attrs_without_type` is very large it may be wise to put a hard-cap to limit the exponential growth of possibilities (currently set to 3) 
         num_of_attrs_without_type = min(num_of_attrs_without_type, 3)
 
         # Add `num_of_attrs_without_type` new types in the possible assignable types
@@ -261,7 +263,7 @@ def infer_cell_node_type(G, marked_homographs, marked_unambiguous_values, attr_t
     return nodes_inferred_as_homographs, nodes_inferred_as_unambiguous
 
 
-def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
+def type_propagation(df, G, marked_homographs, marked_unambiguous_values, perform_inference=False):
     '''
     Arguments
     -------
@@ -301,7 +303,7 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
                 for attr in attrs_of_val:
                     attr_to_type[attr]=cur_max_type 
             else:
-                # Assign every attribute in `attrs_of_val` to `next_available_type` and increment it
+                # Assign every attribute in `attrs_of_val` to `next_available_type` and then increment `next_available_type`
                 for attr in attrs_of_val:
                     attr_to_type[attr]=next_available_type
                 next_available_type+=1
@@ -314,6 +316,7 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
     print("Propagating marked homographs...")
     for hom in tqdm(marked_homograph_to_num_attrs_dict.keys()):
         attrs_of_hom = utils.graph_helpers.get_attribute_of_instance(G, hom)
+        print('Marked homograph:', hom, 'is connected to', len(attrs_of_hom), 'attribute nodes')
         
         if len(attrs_of_hom) == 2:
             # Only two attributes connected to the current homograph so assign a different type to each one
@@ -327,7 +330,7 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
                     next_available_type += 1
                 else:
                     # Types for the two attributes are the same and initialized
-                    # Do nothing, but this means there will be a homograph constraint violation
+                    # Do nothing. Note that this means there will be a homograph constraint violation
                     pass
             else:
                 # The two attributes have different types (if one an attribute has an uninitialized type, initialize it)
@@ -341,6 +344,7 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
                     # Do nothing, the are already of different types and initialized
                     pass
         else:
+            # Current marked homograph is connected to more than two attribute nodes 
             # Current approach chooses a valid assignment with the least number of unique types (no exploration)
             # TODO: Perform some sort of random assignment of types minimizing constraint violations and number of unique types  
             attr_to_type, next_available_type = process_homograph(hom, G, attr_to_type, next_available_type)
@@ -350,14 +354,15 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values):
 
     # Check how many attributes have been assigned a type, and how many attributes there are in total
     print("There are", sum(1 for attr in attr_to_type if attr_to_type[attr] > 0), "attribute nodes that have been assigned a type")
-    print("A total of", len(set(attr_to_type.values())), 'unique types were assigned to all attributes\n')
+    print("A total of", len(set(val for val in attr_to_type.values() if val > 0)), 'unique types were assigned to all attributes\n')
 
-    # Check how many cell nodes (not in the marked_homographs and marked_unambiguous values) can be inferred as identical or homographs
-    inferred_homographs, inferred_unambiguous = infer_cell_node_type(G, marked_homographs, marked_unambiguous_values, attr_to_type)
+    if perform_inference:
+        # Check how many cell nodes (not in the marked_homographs and marked_unambiguous values) can be inferred as identical or homographs
+        inferred_homographs, inferred_unambiguous = infer_cell_node_type(G, marked_homographs, marked_unambiguous_values, attr_to_type)
 
-    # Evaluate the inferred results
-    print("Inferred homographs precision:", get_precision(df, inferred_homographs, is_homograph=True))
-    print("Inferred unambiguous precision:", get_precision(df, inferred_unambiguous, is_homograph=False))
+        # Evaluate the inferred results
+        print("Inferred homographs precision:", get_precision(df, inferred_homographs, is_homograph=True))
+        print("Inferred unambiguous precision:", get_precision(df, inferred_unambiguous, is_homograph=False))
      
     # TODO: Loop over remaining cell nodes not in `marked_homographs` and `marked_unambiguous_values` and propagate semantic types based on current information
 
@@ -368,7 +373,11 @@ def get_precision(df, node_list, is_homograph=True):
     Given a list of nodes that are marked either as homographs or non-homographs find how many out of them are truly homographs or not
     '''
     df_subset = df[df['node'].isin(node_list)]
-    precision = df_subset['is_homograph'].value_counts()[is_homograph] / len(node_list)
+
+    if is_homograph in df_subset['is_homograph'].value_counts(): 
+        precision = df_subset['is_homograph'].value_counts()[is_homograph] / len(node_list)
+    else:
+        precision = 0
     return precision
 
 def get_attribute_types_of_cell_node(G, cell_node, attr_to_type):
@@ -398,8 +407,8 @@ def get_marked_nodes_from_file(file_path, df, G):
 
     Returns
     -------
-    Returns two lists, a list of the marked homographs and a list of the 
-    marked unambiguous values 
+    Returns two lists, a list of the marked homographs and a list of lists with the 
+    marked unambiguous values for each marked homograph
     '''
 
     print('\nExtracting the marked nodes from file...')
@@ -421,7 +430,7 @@ def get_marked_nodes_from_file(file_path, df, G):
             df_tmp = df[df['node'].isin(cell_node_neighbors)]
             df_tmp = process_df(df_tmp, G)
             _, unambiguous_values = get_marked_nodes(df_tmp, bottom_perc=10)
-            marked_unambiguous_values += unambiguous_values
+            marked_unambiguous_values.append(unambiguous_values)
     else:
         marked_unambiguous_values = json_dict['marked_unambiguous_values']
 
@@ -442,10 +451,28 @@ def main(args):
     df = pickle.load(open(args.dataframe, 'rb'))
     df = process_df(df, graph)
 
-    # Select the marked homographs and unambiguous values
     if args.input_nodes:
+        # The marked homographs are specified from a file
         marked_homographs, marked_unambiguous_values = get_marked_nodes_from_file(args.input_nodes, df, graph)
+
+        print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
+            len(list(itertools.chain.from_iterable(marked_unambiguous_values))), 'cell nodes marked as unambiguous values.')
+        print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
+        print('Marked Unambiguous values precision:', get_precision(df, list(itertools.chain.from_iterable(marked_unambiguous_values)), is_homograph=False), '\n')
+
+        # Perform Type Propagation independently for each marked homograph
+        # TODO: Consider case where propagation is not independently executed for eachmarked homograph
+        attr_to_type = {}
+        for i in range(len(marked_homographs)):
+            attr_to_type_tmp = type_propagation(df, graph, [marked_homographs[i]], marked_unambiguous_values[i], perform_inference=False)
+
+            # Populate the attr_to_type dictionary for the currently marked homograph
+            attr_to_type[marked_homographs[i]] = {'marked_unambiguous_values': [], 'attr_to_type': {}}
+            attr_to_type[marked_homographs[i]]['marked_unambiguous_values'] = marked_unambiguous_values[i]
+            attr_to_type[marked_homographs[i]]['attr_to_type'] = attr_to_type_tmp
     else:
+        # The marked homographs and marked unambiguous values are selected by their BC score rankings 
+
         # Get initial lists of homographs and unambiguous nodes by extacting the top and bottom nodes in the BC rankings
         marked_homographs, marked_unambiguous_values = get_marked_nodes(
             df=df, 
@@ -453,21 +480,21 @@ def main(args):
             bottom_perc=40.0
         )
 
-    print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
-        len(marked_unambiguous_values), 'cell nodes marked as unambiguous values.')
-    print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
-    print('Marked Unambiguous values precision:', get_precision(df, marked_unambiguous_values, is_homograph=False), '\n')
+        print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
+            len(marked_unambiguous_values), 'cell nodes marked as unambiguous values.')
+        print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
+        print('Marked Unambiguous values precision:', get_precision(df, marked_unambiguous_values, is_homograph=False), '\n')
 
-    # Perform the Propagation
-    attr_to_type = type_propagation(df, graph, marked_homographs, marked_unambiguous_values)
+        # Perform the Propagation
+        attr_to_type = type_propagation(df, graph, marked_homographs, marked_unambiguous_values, perform_inference=False)
 
-    for attr in attr_to_type:
-        if attr_to_type[attr] > 0:
-            print(attr, attr_to_type[attr])
+        for attr in attr_to_type:
+            if attr_to_type[attr] > 0:
+                print(attr, attr_to_type[attr])
 
-    # Save attr_to_type dict to the output_dir
-    with open(args.output_dir + 'attr_to_type.pickle', 'wb') as handle:
-        pickle.dump(attr_to_type, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # Save attr_to_type dict to the output_dir as a JSON file
+    with open(args.output_dir + 'attr_to_type.json', 'w') as fp:
+        json.dump(attr_to_type, fp, sort_keys=True, indent=4)
 
 
     
