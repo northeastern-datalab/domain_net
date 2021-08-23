@@ -6,6 +6,8 @@ from collections import Counter
 from tqdm import tqdm
 from timeit import default_timer as timer
 
+from .graph_helpers import get_cell_node_column_names
+
 def get_filename_column_tuple_to_unionable_pairs_dict(G, groundtruth):
     '''
     Given the groundtruth get for each (filename, column_name) a set
@@ -224,3 +226,17 @@ def classify_nodes_from_column_name(g):
             else:
                 cell_value_to_class_dict[node] = 'unambiguous value'
     return cell_value_to_class_dict
+
+
+def is_cur_node_homograph(G, node):
+    '''
+    Returns true if the specified `node` is a homograph.
+
+    This function is applicable ONLY when the specified graph `G` has type 'column_name' for its attribute nodes
+    which is used to derive if a cell node is a or isn't a homograph 
+    '''
+    col_names = get_cell_node_column_names(G, node)
+    if len(col_names) > 1:
+        return True
+    else:
+        return False
