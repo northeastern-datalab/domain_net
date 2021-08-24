@@ -14,18 +14,52 @@ from timeit import default_timer as timer
 from pathlib import Path
 from tqdm import tqdm
 
-def get_marked_nodes(df, top_perc=10.0, bottom_perc=10.0):
+
+def check_coverage(G, marked_unambiguous_values, pre_selected_marked_homograph):
+    '''
+    Checks if the selected `marked_unambiguous_values` cover all the attribute nodes of the `pre_selected_marked_homograph`
+
+    Returns two values:
+    1) a boolean specifying if coverage was satisfied
+    2) a list of the attributes that still need to be covered, this value is populated only if the caverage wasn't satisfied
+    '''
+    # A set of all attributes that need to be covered
+    attributes = set(utils.graph_helpers.get_attribute_of_instance(G, pre_selected_marked_homograph))
+    
+    # A set of the attributes covered by the current list of `marked_unambiguous_values`
+    covered_attributes = set()
+    for node in marked_unambiguous_values:
+        covered_attributes |= set(utils.graph_helpers.get_attribute_of_instance(G, node))
+
+    attributes_to_be_covered = attributes - covered_attributes
+    if len(attributes_to_be_covered) > 0:
+        return False, list(attributes_to_be_covered)
+    else:
+        return True, []
+
+def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_values_complete_coverage=False, pre_selected_marked_homograph=None):
     '''
     Returns two lists. The cell values in the `top_perc` percentage ranks are marked as homographs
     and the cell values in the `bottom_perc` percentage ranks that are are marked as unambiguous values
+
+    If `marked_unambiguous_values_complete_coverage` is specified then, the marked unambiguous values are selected
+    such that all attribute nodes are covered (i.e. there is at least one cell node for each attribute)
 
     Arguments
     -------
         df (pandas dataframe): dataframe that includes a 'dense_rank' column with the rank for each cell node
 
+        G (networkx graph): Input graph corresponding to the dataframe
+
         top_perc (float): top percentage of ranks that are marked as homographs 
 
         bottom (float): bottom percentage of ranks that are marked as unambiguous values
+
+        marked_unambiguous_values_complete_coverage (bool): If specified ensures that the marked unambiguous nodes
+        cover all attributes of the marked homograph
+
+        pre_selected_marked_homograph (str): This argument only matters if `marked_unambiguous_values_complete_coverage`
+        is specified. If so it specifies the single marked_homograph selected that is needed by the check_coverage() function
        
     Returns
     -------
@@ -38,6 +72,14 @@ def get_marked_nodes(df, top_perc=10.0, bottom_perc=10.0):
 
     marked_homographs = df[df['dense_rank'] <= homograph_rank_threshold]['node'].tolist()
     marked_unambiguous_values = df[df['dense_rank'] >= unambiguous_rank_threshold]['node'].tolist()
+
+    if marked_unambiguous_values_complete_coverage:
+        # Check for coverage, if coverage criteria are not satisfied select more cell nodes until satisfying criteria are met
+        coverage_status, attributes_missing_coverage = check_coverage(G, marked_unambiguous_values, pre_selected_marked_homograph=pre_selected_marked_homograph)
+
+        if coverage_status == False:
+            print('Coverage not satisfied. Attributes:', attributes_missing_coverage, 'are still missing coverage.')
+            exit()
 
     return marked_homographs, marked_unambiguous_values
 
@@ -389,7 +431,7 @@ def get_attribute_types_of_cell_node(G, cell_node, attr_to_type):
     attr_types = {attr:attr_to_type[attr] for attr in attrs_of_cell_node}
     return attr_types
 
-def get_marked_nodes_from_file(file_path, df, G):
+def get_marked_nodes_from_file(file_path, df, G, marked_unambiguous_values_complete_coverage=False, bottom_percent=10.0):
     '''
     Given the JSON file path that specifies what nodes are marked return
     the `marked_homographs` and the `marked_unambiguous_values`.
@@ -404,6 +446,9 @@ def get_marked_nodes_from_file(file_path, df, G):
         df (pandas dataframe): pandas dataframe with the BC score for each node in the graph
 
         G (networkx graph): The graph representation of the input dataset 
+
+        marked_unambiguous_values_complete_coverage (bool): If specified ensures that the marked unambiguous nodes
+        cover all attributes of the marked homograph
 
     Returns
     -------
@@ -429,7 +474,13 @@ def get_marked_nodes_from_file(file_path, df, G):
             # Limit the df to only those nodes and extract the bottom `X` percent of them based on their BC scores
             df_tmp = df[df['node'].isin(cell_node_neighbors)]
             df_tmp = process_df(df_tmp, G)
-            _, unambiguous_values = get_marked_nodes(df_tmp, bottom_perc=10)
+            _, unambiguous_values = get_marked_nodes(
+                df_tmp,
+                G=G,
+                bottom_perc=bottom_percent,
+                marked_unambiguous_values_complete_coverage=marked_unambiguous_values_complete_coverage,
+                pre_selected_marked_homograph=hom
+            )
             marked_unambiguous_values.append(unambiguous_values)
     else:
         marked_unambiguous_values = json_dict['marked_unambiguous_values']
@@ -453,7 +504,13 @@ def main(args):
 
     if args.input_nodes:
         # The marked homographs are specified from a file
-        marked_homographs, marked_unambiguous_values = get_marked_nodes_from_file(args.input_nodes, df, graph)
+        marked_homographs, marked_unambiguous_values = get_marked_nodes_from_file(
+            file_path = args.input_nodes,
+            df = df,
+            G = graph,
+            marked_unambiguous_values_complete_coverage=args.marked_unambiguous_values_complete_coverage,
+            bottom_percent = args.bottom_percent
+        )
 
         print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
             len(list(itertools.chain.from_iterable(marked_unambiguous_values))), 'cell nodes marked as unambiguous values.')
@@ -475,9 +532,10 @@ def main(args):
 
         # Get initial lists of homographs and unambiguous nodes by extacting the top and bottom nodes in the BC rankings
         marked_homographs, marked_unambiguous_values = get_marked_nodes(
-            df=df, 
-            top_perc=15.0,
-            bottom_perc=40.0
+            df=df,
+            G=graph, 
+            top_perc=args.top_percent,
+            bottom_perc=args.bottom_percent
         )
 
         print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
@@ -526,6 +584,16 @@ if __name__ == "__main__":
     If a file is not provided then the top and bottom cell nodes ranked by their BC scores are selected as the \
     marked homographs and unambiguous values respectively.')
 
+    parser.add_argument('--marked_unambiguous_values_complete_coverage', action='store_true',
+    help='If specified then we ensure that there the marked unambiguous values are selected so that they cover all \
+    attribute nodes of the marked homograph')
+
+    parser.add_argument('--bottom_percent', type=float, default=10.0, 
+    help='Specifies the bottom percentage of nodes to be used as the marked unambiguous values')
+
+    parser.add_argument('--top_percent', type=float, default=10.0, 
+    help='Specifies the top percentage of nodes to be used as the marked unambiguous values')
+
     # parser.add_argument('--mode', metavar='mode', choices=['single', 'multiple'], default='single',
     # help='Specifies if we want to find the number ')
 
@@ -540,6 +608,11 @@ if __name__ == "__main__":
     print('Graph path:', args.graph)
     print('DataFrame path:', args.dataframe)
     print('Input Nodes Path:', args.input_nodes)
+    print('Bottom Percent:', args.bottom_percent)
+    print('Top Percent:', args.top_percent)
+
+    if args.marked_unambiguous_values_complete_coverage:
+        print('Ensuring complete coverage for the marked unambiguous values')
     
     if args.seed:   
         print('User specified seed:', args.seed)
