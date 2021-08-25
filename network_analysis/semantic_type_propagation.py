@@ -37,6 +37,34 @@ def check_coverage(G, marked_unambiguous_values, pre_selected_marked_homograph):
     else:
         return True, []
 
+def satisfy_coverage(G, df, pre_selected_marked_homograph, marked_unambiguous_values, attributes_to_be_covered):
+    '''
+    Returns an updated list of the `marked_unambiguous_values` so that they cover all the attributes in
+    `attributes_to_be_covered`.
+
+    Note that the `pre_selected_marked_homograph` must not be part of the `marked_unambiguous_values` 
+    '''
+    
+    new_marked_unambiguous_values_set = set(marked_unambiguous_values)
+    for attr_node in attributes_to_be_covered:
+        # Get a list of all the cell_nodes of the current 'attr_node'
+        cell_nodes = utils.graph_helpers.get_instances_for_attribute(G, attr_node)
+
+        # Ensure the 'cell_nodes' correspond to nodes in `df` (i.e., they have a degree of 2 or greater)
+        # and they are ranked by their BC scores (low -> high). We also ensure that the selected cell node
+        # is not the `pre_selected_marked_homograph` 
+        cell_nodes = df[df['node'].isin(cell_nodes)].sort_values(by='betweenness_centrality')['node']
+        for cell_node in cell_nodes:
+            if cell_node != pre_selected_marked_homograph:
+                new_marked_unambiguous_values_set.add(cell_node)
+                break
+
+    # Ensure that coverage is satisfied now
+    if not check_coverage(G, list(new_marked_unambiguous_values_set), pre_selected_marked_homograph)[0]:
+        raise ValueError('check_coverage failed for marked homograph ' + pre_selected_marked_homograph)
+
+    return list(new_marked_unambiguous_values_set)
+
 def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_values_complete_coverage=False, pre_selected_marked_homograph=None):
     '''
     Returns two lists. The cell values in the `top_perc` percentage ranks are marked as homographs
@@ -78,8 +106,15 @@ def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_
         coverage_status, attributes_missing_coverage = check_coverage(G, marked_unambiguous_values, pre_selected_marked_homograph=pre_selected_marked_homograph)
 
         if coverage_status == False:
-            print('Coverage not satisfied. Attributes:', attributes_missing_coverage, 'are still missing coverage.')
-            exit()
+            # Coverage is not satisfied, extend the 'marked_unambiguous_values' to satisfy the coverage criteria
+            print('\nCoverage not satisfied marked homograph:', pre_selected_marked_homograph, '\nAttributes:', attributes_missing_coverage, 'are still missing coverage\n')
+            marked_unambiguous_values = satisfy_coverage(
+                G=G,
+                df=df,
+                pre_selected_marked_homograph=pre_selected_marked_homograph,
+                marked_unambiguous_values=marked_unambiguous_values,
+                attributes_to_be_covered=attributes_missing_coverage
+            )            
 
     return marked_homographs, marked_unambiguous_values
 
