@@ -61,11 +61,12 @@ def satisfy_coverage(G, df, pre_selected_marked_homograph, marked_unambiguous_va
 
     # Ensure that coverage is satisfied now
     if not check_coverage(G, list(new_marked_unambiguous_values_set), pre_selected_marked_homograph)[0]:
-        raise ValueError('check_coverage failed for marked homograph ' + pre_selected_marked_homograph)
+        raise ValueError('check_coverage() failed for marked homograph ' + pre_selected_marked_homograph)
 
     return list(new_marked_unambiguous_values_set)
 
-def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_values_complete_coverage=False, pre_selected_marked_homograph=None):
+def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_values_complete_coverage=False, pre_selected_marked_homograph=None,
+    marked_homographs_missing_coverage=[]):
     '''
     Returns two lists. The cell values in the `top_perc` percentage ranks are marked as homographs
     and the cell values in the `bottom_perc` percentage ranks that are are marked as unambiguous values
@@ -108,6 +109,8 @@ def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_
         if coverage_status == False:
             # Coverage is not satisfied, extend the 'marked_unambiguous_values' to satisfy the coverage criteria
             print('\nCoverage not satisfied marked homograph:', pre_selected_marked_homograph, '\nAttributes:', attributes_missing_coverage, 'are still missing coverage\n')
+            marked_homographs_missing_coverage.append(pre_selected_marked_homograph)
+
             marked_unambiguous_values = satisfy_coverage(
                 G=G,
                 df=df,
@@ -443,16 +446,19 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values, perfor
      
     # TODO: Loop over remaining cell nodes not in `marked_homographs` and `marked_unambiguous_values` and propagate semantic types based on current information
 
+    # Remove attributes that were not mapped to a type (i.e. they map to the uninitialized type -1)
+    attr_to_type = {attr:val for attr, val in attr_to_type.items() if val > 0}
+
     return attr_to_type
 
-def get_precision(df, node_list, is_homograph=True):
+def get_precision(df, node_set, is_homograph=True):
     '''
-    Given a list of nodes that are marked either as homographs or non-homographs find how many out of them are truly homographs or not
+    Given a set of nodes that are marked either as homographs or non-homographs find how many out of them are truly homographs or not
     '''
-    df_subset = df[df['node'].isin(node_list)]
+    df_subset = df[df['node'].isin(node_set)]
 
     if is_homograph in df_subset['is_homograph'].value_counts(): 
-        precision = df_subset['is_homograph'].value_counts()[is_homograph] / len(node_list)
+        precision = df_subset['is_homograph'].value_counts()[is_homograph] / len(node_set)
     else:
         precision = 0
     return precision
@@ -466,7 +472,7 @@ def get_attribute_types_of_cell_node(G, cell_node, attr_to_type):
     attr_types = {attr:attr_to_type[attr] for attr in attrs_of_cell_node}
     return attr_types
 
-def get_marked_nodes_from_file(file_path, df, G, marked_unambiguous_values_complete_coverage=False, bottom_percent=10.0):
+def get_marked_nodes_from_file(file_path, df, G, data_dict, marked_unambiguous_values_complete_coverage=False, bottom_percent=10.0):
     '''
     Given the JSON file path that specifies what nodes are marked return
     the `marked_homographs` and the `marked_unambiguous_values`.
@@ -481,6 +487,8 @@ def get_marked_nodes_from_file(file_path, df, G, marked_unambiguous_values_compl
         df (pandas dataframe): pandas dataframe with the BC score for each node in the graph
 
         G (networkx graph): The graph representation of the input dataset 
+
+        data_dict (dict): A dictionary that is updated with the marked_homographs_missing coverage
 
         marked_unambiguous_values_complete_coverage (bool): If specified ensures that the marked unambiguous nodes
         cover all attributes of the marked homograph
@@ -500,6 +508,9 @@ def get_marked_nodes_from_file(file_path, df, G, marked_unambiguous_values_compl
     marked_homographs = json_dict['marked_homographs']
     assert len(marked_homographs) > 0, 'There should be at least one value in the marked_homographs list'
 
+    # If `marked_unambiguous_values_complete_coverage` is specified, keep track of the marked homographs for which coverage was missing and had to be fixed
+    marked_homographs_missing_coverage = []
+
     if ('marked_unambiguous_values' not in json_dict) or (len(json_dict['marked_unambiguous_values']) == 0):
         # Find neighboring cell nodes for each `marked_homograph`
         marked_unambiguous_values = []
@@ -514,11 +525,21 @@ def get_marked_nodes_from_file(file_path, df, G, marked_unambiguous_values_compl
                 G=G,
                 bottom_perc=bottom_percent,
                 marked_unambiguous_values_complete_coverage=marked_unambiguous_values_complete_coverage,
-                pre_selected_marked_homograph=hom
+                pre_selected_marked_homograph=hom,
+                marked_homographs_missing_coverage=marked_homographs_missing_coverage
             )
             marked_unambiguous_values.append(unambiguous_values)
     else:
         marked_unambiguous_values = json_dict['marked_unambiguous_values']
+
+    print('There are a total of', len(marked_homographs_missing_coverage), 'marked homographs that are missing coverage.')
+    data_dict['marked_homographs_missing_coverage'] = marked_homographs_missing_coverage
+
+    # Identify the precision of the marked_unambiguous_values for each marked_homograph
+    data_dict['marked_homographs'] = {}
+    for i in range(len(marked_homographs)):
+        data_dict['marked_homographs'][marked_homographs[i]] = {}
+        data_dict['marked_homographs'][marked_homographs[i]]['marked_unambiguous_values_precision'] = get_precision(df=df, node_set=set(marked_unambiguous_values[i]), is_homograph=False)
 
     print('Finished extracting the marked nodes from file\n')
     return marked_homographs, marked_unambiguous_values
@@ -537,31 +558,33 @@ def main(args):
     df = pickle.load(open(args.dataframe, 'rb'))
     df = process_df(df, graph)
 
+    data_dict = {}  # Dictionary holding output data from type propagation as well as other related metadata
+
     if args.input_nodes:
         # The marked homographs are specified from a file
         marked_homographs, marked_unambiguous_values = get_marked_nodes_from_file(
             file_path = args.input_nodes,
             df = df,
             G = graph,
+            data_dict=data_dict,
             marked_unambiguous_values_complete_coverage=args.marked_unambiguous_values_complete_coverage,
             bottom_percent = args.bottom_percent
         )
 
         print('For initialization:', len(marked_homographs), 'cell nodes marked as homographs and', 
-            len(list(itertools.chain.from_iterable(marked_unambiguous_values))), 'cell nodes marked as unambiguous values.')
-        print('Marked Homographs precision:', get_precision(df, marked_homographs, is_homograph=True))
-        print('Marked Unambiguous values precision:', get_precision(df, list(itertools.chain.from_iterable(marked_unambiguous_values)), is_homograph=False), '\n')
+            len(set(itertools.chain.from_iterable(marked_unambiguous_values))), 'cell nodes marked as unambiguous values.')
+        print('Marked Homographs precision:', get_precision(df, set(marked_homographs), is_homograph=True))
+        print('Marked Unambiguous values precision:', get_precision(df, set(itertools.chain.from_iterable(marked_unambiguous_values)), is_homograph=False), '\n')
 
         # Perform Type Propagation independently for each marked homograph
         # TODO: Consider case where propagation is not independently executed for eachmarked homograph
-        attr_to_type = {}
         for i in range(len(marked_homographs)):
             attr_to_type_tmp = type_propagation(df, graph, [marked_homographs[i]], marked_unambiguous_values[i], perform_inference=False)
 
             # Populate the attr_to_type dictionary for the currently marked homograph
-            attr_to_type[marked_homographs[i]] = {'marked_unambiguous_values': [], 'attr_to_type': {}}
-            attr_to_type[marked_homographs[i]]['marked_unambiguous_values'] = marked_unambiguous_values[i]
-            attr_to_type[marked_homographs[i]]['attr_to_type'] = attr_to_type_tmp
+            data_dict['marked_homographs'][marked_homographs[i]].update({'marked_unambiguous_values': [], 'attr_to_type': {}})
+            data_dict['marked_homographs'][marked_homographs[i]]['marked_unambiguous_values'] = marked_unambiguous_values[i]
+            data_dict['marked_homographs'][marked_homographs[i]]['attr_to_type'] = attr_to_type_tmp
     else:
         # The marked homographs and marked unambiguous values are selected by their BC score rankings 
 
@@ -585,9 +608,9 @@ def main(args):
             if attr_to_type[attr] > 0:
                 print(attr, attr_to_type[attr])
 
-    # Save attr_to_type dict to the output_dir as a JSON file
-    with open(args.output_dir + 'attr_to_type.json', 'w') as fp:
-        json.dump(attr_to_type, fp, sort_keys=True, indent=4)
+    # Save data_dict dict to the output_dir as a JSON file
+    with open(args.output_dir + 'output.json', 'w') as fp:
+        json.dump(data_dict, fp, sort_keys=True, indent=4)
 
 
     
