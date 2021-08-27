@@ -242,7 +242,7 @@ def process_homograph(hom, G, attr_to_type, next_available_type):
     valid_assignments = get_valid_assignments(attr_of_hom_to_type, next_available_type)
 
     # Sort the assignments based on the number of unique types used. Less types ranks earlier (lower index) 
-    valid_assignments = sorted(valid_assignments, key=lambda k: len(set(k.values()))) 
+    valid_assignments = sorted(valid_assignments, key=lambda k: len(set(k.values())))
 
     # Choose the first assignment in the `valid_assignments` list and update `attr_to_type` and `next_available_type`
     for attr in valid_assignments[0]:
@@ -368,13 +368,19 @@ def type_propagation(df, G, marked_homographs, marked_unambiguous_values, perfor
     
     ######----- Propagate unambiguous values -----######
     print("Propagating marked unambiguous values...")
+    # Process the 'marked_unambiguous_values' in the order of their degree (high -> low)
+    marked_unambiguous_values_degrees = []
+    for val in marked_unambiguous_values:
+        marked_unambiguous_values_degrees.append(G.degree[val])
+    marked_unambiguous_values = [x for _, x in sorted(zip(marked_unambiguous_values_degrees, marked_unambiguous_values), key=lambda pair: pair[0], reverse=True)]
+
     for val in tqdm(marked_unambiguous_values):
         attrs_of_val = utils.graph_helpers.get_attribute_of_instance(G, val)
 
         # Check if all attributes of the current value already have the same type
         if (same_types(attrs_of_val, attr_to_type)):
             # No need to change anything
-            continue
+            pass
         else:
             # Assign a type to each attribute in `attrs_of_val` if there isn't one available
             cur_max_type = max({attr_to_type[attr] for attr in attrs_of_val})
@@ -528,7 +534,8 @@ def get_marked_nodes_from_file(file_path, df, G, data_dict, marked_unambiguous_v
                 pre_selected_marked_homograph=hom,
                 marked_homographs_missing_coverage=marked_homographs_missing_coverage
             )
-            marked_unambiguous_values.append(unambiguous_values)
+            # Ensure the inserted 'unambiguous_values' are sorted
+            marked_unambiguous_values.append(sorted(unambiguous_values))
     else:
         marked_unambiguous_values = json_dict['marked_unambiguous_values']
 
@@ -577,7 +584,7 @@ def main(args):
         print('Marked Unambiguous values precision:', get_precision(df, set(itertools.chain.from_iterable(marked_unambiguous_values)), is_homograph=False), '\n')
 
         # Perform Type Propagation independently for each marked homograph
-        # TODO: Consider case where propagation is not independently executed for eachmarked homograph
+        # TODO: Consider case where propagation is not independently executed for each marked homograph
         for i in range(len(marked_homographs)):
             attr_to_type_tmp = type_propagation(df, graph, [marked_homographs[i]], marked_unambiguous_values[i], perform_inference=False)
 
