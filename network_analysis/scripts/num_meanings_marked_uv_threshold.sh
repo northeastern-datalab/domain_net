@@ -1,6 +1,6 @@
 # Script that runs number of meanings estimation with various thresholds for the bottom X percent of nodes that are marked as unambiguous
 
-out_dir="../output/synthetic_example_large/threshold_experiment/complete_coverage/"
+out_dir="../output/synthetic_example_large/threshold_experiment/incomplete_coverage/"
 g_path="../../graph_construction/combined_graphs_output/synthetic_benchmark_large/bipartite/bipartite.graph"
 df_path="../output/synthetic_example_large/graph_stats_with_groundtruth_df.pickle"
 input_nodes_path="../input/synthetic_large/input.json"
@@ -10,7 +10,7 @@ bottom_percent_low=2
 bottom_percent_high=60
 bottom_percent_delta=1
 
-complete_coverage=true
+complete_coverage=false
 
 for bottom_percent in `seq $bottom_percent_low $bottom_percent_delta $bottom_percent_high`;
 do  

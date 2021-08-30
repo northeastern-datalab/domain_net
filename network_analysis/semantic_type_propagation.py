@@ -511,6 +511,12 @@ def get_marked_nodes_from_file(file_path, df, G, data_dict, marked_unambiguous_v
     with open(file_path) as json_file:
         json_dict = json.load(json_file)
 
+        # Ensure single quotes are properly converted from escaped json string to python string
+        parsed_marked_homographs_list = []
+        for val in json_dict['marked_homographs']:
+            parsed_marked_homographs_list.append(val.replace("\\'", "\'"))
+        json_dict['marked_homographs'] = parsed_marked_homographs_list
+
     marked_homographs = json_dict['marked_homographs']
     assert len(marked_homographs) > 0, 'There should be at least one value in the marked_homographs list'
 

@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 
+from tqdm import tqdm
+
 from .graph_helpers import get_cell_node_column_names
 from .graph_helpers import get_attribute_of_instance
 
@@ -38,10 +40,12 @@ def get_num_meanings_groundtruth(df, G):
     Returns an updated dataframe with the new column 'num_meanings_groundtruth'
     '''
 
-    df['num_meanings_groundtruth'] = np.nan
+    df['num_meanings_groundtruth'] = 1
+
+    df_with_homographs = df[df['is_homograph'] == True]
 
     # Assign the groundtruth number of meanings for each homograph in the dataframe
-    for idx, row in df[df['is_homograph'] == True].iterrows():
+    for idx, row in tqdm(df_with_homographs.iterrows(), total=df_with_homographs.shape[0]):
         df.loc[idx, 'num_meanings_groundtruth'] = len(get_cell_node_column_names(G, row['node']))
 
     return df
@@ -69,7 +73,7 @@ def process_num_meanings_df(df, out_dict, G):
     df['marked_hom_degree'] = np.nan
     df['marked_uv_avg_degree'] = np.nan
 
-    for marked_homograph in out_dict['marked_homographs']:
+    for marked_homograph in tqdm(out_dict['marked_homographs']):
         num_meanings = len(set(out_dict['marked_homographs'][marked_homograph]['attr_to_type'].values()))
         df.loc[df['node'] == marked_homograph, 'num_meanings'] = num_meanings
         df.loc[df['node'] == marked_homograph, 'num_marked_unambiguous_vals'] = len(out_dict['marked_homographs'][marked_homograph]['marked_unambiguous_values'])
