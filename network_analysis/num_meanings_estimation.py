@@ -1,5 +1,6 @@
 import networkx as nx
 import pandas as pd
+import numpy as np
 import random
 
 import argparse
@@ -72,12 +73,33 @@ def get_jaccard(node1, node2, G):
 
 def get_measure(node, G, pairwise_measure='jaccard'):
     '''
-    Returns a dictionary that maps a pair of attributes to its score.
-    The key is: 'attr1' + '__' + 'attr2' where attr1 < attr2 when sorted lexicographically
+    Processes the input dataframe so that it only contains cell nodes with degree greater than 1.
+    The returned dataframe also includes a `dense_rank` column with the nodes ranked by their BC scores
+
+    Arguments
+    -------
+        node (str): the input node for which we want to compute pairwise measure between its connected attribute nodes 
+
+        G (networkx graph): Input graph
+
+        pairwise_measure (str): the measure computed between two attributes (must be one of ['jaccard', 'unionability'])
+       
+    Returns
+    -------
+    Returns 3 items:
+    
+    1) A dictionary that maps a pair of attributes to its score where the key is: 'attr1' + '__' + 'attr2' where attr1 < attr2 when sorted lexicographically
+
+    2) A numpy array of the pairwise measures represented as a matrix (the matrix is square with dimensions equal to the number of attribute nodes of the specified `node`)
+
+    3) A mapping of the index in the numpy array to the attribute node it corresponds to
     '''
     
     # Get a list of the attribute nodes connected to `node`
     attrs = sorted(utils.graph_helpers.get_attribute_of_instance(G, node))
+
+    # Mapping of index in `attrs` list to the attribute
+    idx_to_node = {i:attrs[i] for i in range(len(attrs))}
 
     # Get a list of the attribute pairs for which the measure needs to be computed 
     attr_pairs = list(itertools.combinations(attrs, 2))
@@ -90,6 +112,10 @@ def get_measure(node, G, pairwise_measure='jaccard'):
             score = get_jaccard(pair[0], pair[1], G)
             key_str = pair[0] + '__' + pair[1]
             pair_to_measure[key_str] = score
+
+    # Construct the pairwise measures matrix 
+    pairwise_measures_matrix = np.zeros(shape=(len(attrs), len(attrs)))
+    np.fill_diagonal(pairwise_measures_matrix, 1)
     
     return pair_to_measure
 
@@ -104,7 +130,7 @@ def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard'):
         node_to_measures[node] = get_measure(node, G, pairwise_measure)
     
     # Save the node_to_measures as a json in the output_dir
-    with open(args.output_dir + 'node_to_measures.json', 'w') as fp:
+    with open(output_dir + 'node_to_measures.json', 'w') as fp:
         json.dump(node_to_measures, fp, sort_keys=True, indent=4)
 
 
