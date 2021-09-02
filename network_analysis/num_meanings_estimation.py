@@ -70,6 +70,21 @@ def get_jaccard(node1, node2, G):
     union = node1_nodes | node2_nodes
     return len(intersection)/len(union)
 
+def symmetrize(a):
+    """
+    Return a symmetrized version of NumPy array a.
+
+    Values 0 are replaced by the array value at the symmetric
+    position (with respect to the diagonal), i.e. if a_ij = 0,
+    then the returned array a' is such that a'_ij = a_ji.
+
+    Diagonal values are left untouched.
+
+    a -- square NumPy array, such that a_ij = 0 or a_ji = 0, 
+    for i != j.
+    """
+    return a + a.T - np.diag(a.diagonal())
+
 
 def get_measure(node, G, pairwise_measure='jaccard'):
     '''
@@ -116,8 +131,20 @@ def get_measure(node, G, pairwise_measure='jaccard'):
     # Construct the pairwise measures matrix 
     pairwise_measures_matrix = np.zeros(shape=(len(attrs), len(attrs)))
     np.fill_diagonal(pairwise_measures_matrix, 1)
-    
-    return pair_to_measure
+
+    for i in range(1, len(attrs)-1):
+        for j in range(i, len(attrs)):
+            if i==j:
+                # Do nothing for the diagonal terms
+                continue
+            else:
+                pair = idx_to_node[i] + '__' + idx_to_node[j]
+                score = pair_to_measure[pair]
+                pairwise_measures_matrix[i][j] = score
+    # The matrix is symmetric so populate the values in the bottom left triangle
+    pairwise_measures_matrix = symmetrize(pairwise_measures_matrix)
+
+    return pair_to_measure, pairwise_measures_matrix, idx_to_node
 
 
 def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard'):
@@ -125,9 +152,15 @@ def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard'):
     Given a list of nodes compute the pairwise_measures between the attribute nodes for each of the `nodes` specified
     '''
     node_to_measures = {}
+    Path(output_dir + 'matrices/').mkdir(parents=True, exist_ok=True)
 
     for node in nodes:
-        node_to_measures[node] = get_measure(node, G, pairwise_measure)
+        node_to_measures[node], matrix, idx_to_node = get_measure(node, G, pairwise_measure)
+
+        # Save the 'matrix' numpy array and the 'index_to_node' dictionary under the output_dir/matrices/ directory
+        np.save(output_dir+'matrices/'+node+'.npy', matrix)
+        with open(output_dir+'matrices/'+node+'_idx_to_node.pickle', 'wb') as handle:
+            pickle.dump(idx_to_node, handle)
     
     # Save the node_to_measures as a json in the output_dir
     with open(output_dir + 'node_to_measures.json', 'w') as fp:
