@@ -132,7 +132,7 @@ def get_measure(node, G, pairwise_measure='jaccard'):
     pairwise_measures_matrix = np.zeros(shape=(len(attrs), len(attrs)))
     np.fill_diagonal(pairwise_measures_matrix, 1)
 
-    for i in range(1, len(attrs)-1):
+    for i in range(0, len(attrs)-1):
         for j in range(i, len(attrs)):
             if i==j:
                 # Do nothing for the diagonal terms
