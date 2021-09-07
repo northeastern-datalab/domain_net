@@ -13,6 +13,14 @@ from timeit import default_timer as timer
 from pathlib import Path
 from tqdm import tqdm
 
+import os
+import glob
+import subprocess
+
+import sys
+sys.path.append('../table-union-master/')
+import TUS_sem_file as tus_sem_file
+
 def process_df(df, G):
     '''
     Processes the input dataframe so that it only contains cell nodes with degree greater than 1.
@@ -85,8 +93,33 @@ def symmetrize(a):
     """
     return a + a.T - np.diag(a.diagonal())
 
+def populate_unionability_output_dir(attrs, G, unionability_output_path):
+    '''
+    Populates the specified 'unionability_output_path' with a csv file for each attribute in 'attrs'.
+    The csv file is populated with the cell nodes appearing in each attribute
+    '''
+    # Remove all existing files in the 'unionability_output_path' directory
+    files = glob.glob(unionability_output_path+'*')
+    for f in files:
+        os.remove(f)
 
-def get_measure(node, G, pairwise_measure='jaccard'):
+    # Create a csv file for each attribute
+    for attr in attrs:
+        column_name = G.nodes[attr]['column_name']
+        vals = utils.graph_helpers.get_instances_for_attribute(G, attr)
+        vals = [column_name] + vals
+        
+        file = open(unionability_output_path+attr, 'w')
+
+        # writing the data into the file
+        for val in vals:
+            file.write(val+'\n')
+        file.close()
+
+
+
+
+def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=None):
     '''
     Processes the input dataframe so that it only contains cell nodes with degree greater than 1.
     The returned dataframe also includes a `dense_rank` column with the nodes ranked by their BC scores
@@ -122,6 +155,20 @@ def get_measure(node, G, pairwise_measure='jaccard'):
     # Maps a pair to its score 
     pair_to_measure = {}
 
+    if pairwise_measure == 'unionability':
+        print('\n\n\n########### Running Unionability Procedure for node:', node, '###########')
+
+        # Populate the files that will be used to compute TUS 
+        populate_unionability_output_dir(attrs = attrs, G=G, unionability_output_path=unionability_output_path)
+        
+        # Run the TUS_sem_file.py file from the shell script
+        subprocess.call(['sh', './num_meanings_TUS_subprocess.sh'])
+
+        print("After subprocess")
+
+        exit()
+
+
     for pair in attr_pairs:
         if pairwise_measure == 'jaccard':
             score = get_jaccard(pair[0], pair[1], G)
@@ -147,7 +194,7 @@ def get_measure(node, G, pairwise_measure='jaccard'):
     return pair_to_measure, pairwise_measures_matrix, idx_to_node
 
 
-def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard'):
+def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard', unionability_output_path=None):
     '''
     Given a list of nodes compute the pairwise_measures between the attribute nodes for each of the `nodes` specified
     '''
@@ -155,7 +202,7 @@ def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard'):
     Path(output_dir + 'matrices/').mkdir(parents=True, exist_ok=True)
 
     for node in nodes:
-        node_to_measures[node], matrix, idx_to_node = get_measure(node, G, pairwise_measure)
+        node_to_measures[node], matrix, idx_to_node = get_measure(node, G, pairwise_measure, unionability_output_path=unionability_output_path)
 
         # Save the 'matrix' numpy array and the 'index_to_node' dictionary under the output_dir/matrices/ directory
         np.save(output_dir+'matrices/'+node+'.npy', matrix)
@@ -188,7 +235,8 @@ def main(args):
         nodes=input_nodes,
         G=graph,
         output_dir=args.output_dir,
-        pairwise_measure=args.pairwise_measure
+        pairwise_measure=args.pairwise_measure,
+        unionability_output_path = args.unionability_output_path
     )
 
 if __name__ == "__main__":
@@ -219,6 +267,8 @@ if __name__ == "__main__":
     parser.add_argument('--pairwise_measure', choices=['jaccard', 'unionability'], default='jaccard',
     help='The pairwise measure used to compare two columns')
 
+    parser.add_argument('--unionability_output_path', help='Path to the directory where the csv files needed for the TUS computation are stored')
+
     # Parse the arguments
     args = parser.parse_args()
 
@@ -231,6 +281,9 @@ if __name__ == "__main__":
     print('DataFrame path:', args.dataframe)
     print('Input Nodes Path:', args.input_nodes)
     print('Pairwise Measure:', args.pairwise_measure)
+
+    if args.unionability_output_path:
+        print('Unionability output files directory:', args.unionability_output_path)
    
     if args.seed:   
         print('User specified seed:', args.seed)
