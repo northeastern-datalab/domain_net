@@ -14,6 +14,11 @@ network_analysis/homograph_injection_evaluation/
 # Ignores for homograph injection
 homograph_injection/metadata
 
+# Other Ignores
+TABLE_UNION_OUTPUT/
+table-union-master/
+OPEN_DATA/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

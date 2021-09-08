@@ -17,9 +17,11 @@ import os
 import glob
 import subprocess
 
-import sys
-sys.path.append('../table-union-master/')
-import TUS_sem_file as tus_sem_file
+# import sys
+# sys.path.append('../table-union-master/')
+# import TUS_sem_file as tus_sem_file
+
+import csv
 
 def process_df(df, G):
     '''
@@ -78,6 +80,31 @@ def get_jaccard(node1, node2, G):
     union = node1_nodes | node2_nodes
     return len(intersection)/len(union)
 
+def get_unionability(node1, node2, all_att_unionability_df, table_unionability_df):
+    '''
+    Method 1: Search for all rows where (query_table=='node1' AND candidate_table=='node2') or (query_table=='node2' AND candidate_table=='node1')  
+
+    Method 2: Extract unionability score from the table_unionability_df, if a queried pair is not found assume a unionability score of 0
+    '''
+    relevant_df_1 = all_att_unionability_df[(all_att_unionability_df['query_table'] == node1) & (all_att_unionability_df['candidate_table'] == node2)]
+    relevant_df_2 = all_att_unionability_df[(all_att_unionability_df['query_table'] == node2) & (all_att_unionability_df['candidate_table'] == node1)]
+    combined_df = relevant_df_1.append(relevant_df_2, ignore_index=True)
+    
+    # TODO: Figure a better way to extract a score in case of many options
+    score = combined_df['score'].mean()
+
+    # Make use of the table_unionability_df
+    relevant_df_1 = table_unionability_df[(table_unionability_df['query_table'] == node1) & (table_unionability_df['candidate_table'] == node2)]
+    relevant_df_2 = table_unionability_df[(table_unionability_df['query_table'] == node2) & (table_unionability_df['candidate_table'] == node1)]
+    combined_df = relevant_df_1.append(relevant_df_2, ignore_index=True)
+    
+    if combined_df.empty:
+        score = 0
+    else:
+        score = combined_df['score'].max()
+
+    return score
+
 def symmetrize(a):
     """
     Return a symmetrized version of NumPy array a.
@@ -110,14 +137,12 @@ def populate_unionability_output_dir(attrs, G, unionability_output_path):
         vals = [column_name] + vals
         
         file = open(unionability_output_path+attr, 'w')
+        csv_writter = csv.writer(file)
 
         # writing the data into the file
         for val in vals:
-            file.write(val+'\n')
+            csv_writter.writerow([val])
         file.close()
-
-
-
 
 def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=None):
     '''
@@ -160,20 +185,28 @@ def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=No
 
         # Populate the files that will be used to compute TUS 
         populate_unionability_output_dir(attrs = attrs, G=G, unionability_output_path=unionability_output_path)
+
+        # Modify the opendata.list file (with the list of new files)
+        file = open('../TABLE_UNION_OUTPUT/opendata.list', 'w')
+        for val in attrs:
+            file.write(val+'\n')
+        file.close()
         
         # Run the TUS_sem_file.py file from the shell script
         subprocess.call(['sh', './num_meanings_TUS_subprocess.sh'])
 
-        print("After subprocess")
-
-        exit()
-
+        # Read the CSV file into a dataframe
+        all_att_unionability_df = pd.read_csv('../TABLE_UNION_OUTPUT/all_att_unionability.csv')
+        table_unionability_df = pd.read_csv('../TABLE_UNION_OUTPUT/ctable_unionability_percentile.csv')
 
     for pair in attr_pairs:
         if pairwise_measure == 'jaccard':
             score = get_jaccard(pair[0], pair[1], G)
-            key_str = pair[0] + '__' + pair[1]
-            pair_to_measure[key_str] = score
+        elif pairwise_measure == 'unionability':
+            score = get_unionability(pair[0], pair[1], all_att_unionability_df, table_unionability_df)
+        key_str = pair[0] + '__' + pair[1]
+        pair_to_measure[key_str] = score
+    
 
     # Construct the pairwise measures matrix 
     pairwise_measures_matrix = np.zeros(shape=(len(attrs), len(attrs)))
@@ -191,6 +224,10 @@ def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=No
     # The matrix is symmetric so populate the values in the bottom left triangle
     pairwise_measures_matrix = symmetrize(pairwise_measures_matrix)
 
+    print(idx_to_node)
+    print(pairwise_measures_matrix)
+    exit()
+
     return pair_to_measure, pairwise_measures_matrix, idx_to_node
 
 
@@ -201,7 +238,7 @@ def get_pairwise_measures(nodes, G, output_dir, pairwise_measure='jaccard', unio
     node_to_measures = {}
     Path(output_dir + 'matrices/').mkdir(parents=True, exist_ok=True)
 
-    for node in nodes:
+    for node in tqdm(nodes):
         node_to_measures[node], matrix, idx_to_node = get_measure(node, G, pairwise_measure, unionability_output_path=unionability_output_path)
 
         # Save the 'matrix' numpy array and the 'index_to_node' dictionary under the output_dir/matrices/ directory
