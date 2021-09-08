@@ -224,10 +224,6 @@ def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=No
     # The matrix is symmetric so populate the values in the bottom left triangle
     pairwise_measures_matrix = symmetrize(pairwise_measures_matrix)
 
-    print(idx_to_node)
-    print(pairwise_measures_matrix)
-    exit()
-
     return pair_to_measure, pairwise_measures_matrix, idx_to_node
 
 
