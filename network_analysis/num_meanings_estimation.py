@@ -17,10 +17,6 @@ import os
 import glob
 import subprocess
 
-# import sys
-# sys.path.append('../table-union-master/')
-# import TUS_sem_file as tus_sem_file
-
 import csv
 
 def process_df(df, G):
@@ -144,6 +140,9 @@ def populate_unionability_output_dir(attrs, G, unionability_output_path):
             csv_writter.writerow([val])
         file.close()
 
+def is_file_empty(file_path):
+    return os.stat(file_path).st_size == 0
+
 def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=None):
     '''
     Processes the input dataframe so that it only contains cell nodes with degree greater than 1.
@@ -195,9 +194,16 @@ def get_measure(node, G, pairwise_measure='jaccard', unionability_output_path=No
         # Run the TUS_sem_file.py file from the shell script
         subprocess.call(['sh', './num_meanings_TUS_subprocess.sh'])
 
-        # Read the CSV file into a dataframe
-        all_att_unionability_df = pd.read_csv('../TABLE_UNION_OUTPUT/all_att_unionability.csv')
-        table_unionability_df = pd.read_csv('../TABLE_UNION_OUTPUT/ctable_unionability_percentile.csv')
+        # Read the CSV file into a dataframe (Check if the csv files are populated, if not then populate the dataframes as empty)
+        if is_file_empty('../TABLE_UNION_OUTPUT/all_att_unionability.csv'):
+            all_att_unionability_df = pd.DataFrame(columns=['query_table', 'candidate_table', 'score'])
+        else:
+            all_att_unionability_df = pd.read_csv('../TABLE_UNION_OUTPUT/all_att_unionability.csv')
+
+        if is_file_empty('../TABLE_UNION_OUTPUT/ctable_unionability_percentile.csv'):
+            table_unionability_df = pd.DataFrame(columns=['query_table', 'candidate_table', 'score'])
+        else:
+            table_unionability_df = pd.read_csv('../TABLE_UNION_OUTPUT/ctable_unionability_percentile.csv')
 
     for pair in attr_pairs:
         if pairwise_measure == 'jaccard':
