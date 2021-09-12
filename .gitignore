@@ -9,6 +9,7 @@
 # Ignores for network analysis
 network_analysis/figures/
 network_analysis/output/
+network_analysis/input/
 network_analysis/homograph_injection_evaluation/
 
 # Ignores for homograph injection
