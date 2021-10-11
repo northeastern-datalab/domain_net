@@ -14,6 +14,17 @@ def get_attribute_of_instance(G, instance_node):
         if G.nodes[neighbor]['type'] == 'attr':
             attribute_nodes.append(neighbor)
     return attribute_nodes
+
+def get_neighbors_of_instance(G, instance_node, type='attr'):
+    '''
+    Given a graph `G` and an `instance_node` from the graph return its direct neighbors of type=`type`
+    '''
+    neighbor_nodes = []
+    for neighbor in G[instance_node]:
+        if G.nodes[neighbor]['type'] == type:
+            neighbor_nodes.append(neighbor)
+    return neighbor_nodes
+
         
 def get_instances_for_attribute(G, attribute_node):
     '''
@@ -45,6 +56,17 @@ def get_cell_node_neighbors(G, cell_node):
     cell_vals = set()
     for attr in attribute_nodes:
         cell_vals |= set(get_instances_for_attribute(G, attr))
+    return list(cell_vals)
+
+def get_row_wise_neighbors(G, cell_node):
+    '''
+    Given a graph `G` and a `cell_node` return all its row-wise cell node neighbors.
+    The row-wise cell node neighbors of a node are all the cell nodes that are connected to its row nodes 
+    '''
+    row_nodes = get_neighbors_of_instance(G, cell_node, 'row')
+    cell_vals = set()
+    for row_node in row_nodes:
+        cell_vals |= set(get_instances_for_attribute(G, row_node))
     return list(cell_vals)
 
 def get_cell_node_column_names(G, cell_node):

@@ -8,6 +8,7 @@ import pickle
 # Import graph generators
 from graph_generators.BipartiteGraph import BipartiteGraph
 from graph_generators.CellValuesOnlyGraph import CellValuesOnlyGraph 
+from graph_generators.TripartiteGraph import TripartiteGraph
 
 from pathlib import Path
 import argparse
@@ -29,6 +30,8 @@ def run_pipeline_on_mode(mode, args):
         G = BipartiteGraph(files, input_data_file_type, same_capitalization)
     if mode == "cell_values_only":
         G = CellValuesOnlyGraph(files, input_data_file_type)
+    if mode == "tripartite":
+        G = TripartiteGraph(files, input_data_file_type, same_capitalization)
 
     print('Created graph has', G.G.number_of_nodes(), 'nodes and', G.G.number_of_edges(), 'edges.\n')
  
@@ -63,7 +66,7 @@ if __name__ == '__main__':
     help='File format of the input raw data (i.e. the tables). One of {csv, tsv}')
 
     # Specifies the type of the constructed graph
-    parser.add_argument('-gt', '--graph_type', choices=['cell_values_only', 'bipartite'], default='bipartite',
+    parser.add_argument('-gt', '--graph_type', choices=['cell_values_only', 'bipartite', 'tripartite'], default='bipartite',
     metavar='graph_type', required=True, help='Specifies the type of the constructed graph')
 
     # If specified, ensures that all strings in a table use the same capitalization (i.e. the are all uppercase letters)
