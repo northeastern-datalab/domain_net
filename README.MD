@@ -2,7 +2,7 @@
 
 ## Repository Overview
 
-- **DATA**: a folder that will contain all the input data (Instructions on how to download the data can be found at: https://github.com/northeastern-datalab/DomainNet-Datasets).
+- **DATA**: a folder that will contain all the input data (Instructions on how to access and download the data can be found at: [Datasets.MD](Datasets.MD)).
  Once you have downloaded the (raw tables) data, unzip it and create a `DATA/` directory and insert all the extracted data into it.
 - **graph_construction**: module to construct a graph representation given a repository of tables
 - **homograph_injection**: module to artificially inject homographs in a repository 
