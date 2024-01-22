@@ -38,6 +38,9 @@ This modified version of networkit allows the specification of source and target
    sudo apt-get install python3-dev 
    sudo apt install g++
    ```
+   For CentOS g++ installation check [this link](https://linuxize.com/post/how-to-install-gcc-compiler-on-centos-7/).
+   
+   Note that a version of g++ (>= 7.0) is required. 
 
 
 ## Reproducibility

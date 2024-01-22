@@ -80,3 +80,20 @@ def get_cell_node_column_names(G, cell_node):
     for attr in attribute_nodes:
         column_names.append(G.nodes[attr]['column_name'])
     return list(set(column_names))
+
+def get_cell_node_column_names_frequency(G, cell_node):
+    '''
+    Given a graph `G` and a `cell_node` return a dictionary keyed by each unique column name to its frequency in the the graph
+
+    Note: This function only works for graphs `G` where attribute nodes have a 'column_name' type (i.e. synthetic benchmark graphs) 
+    '''
+    attribute_nodes = get_attribute_of_instance(G, cell_node)
+    column_names_freq_dict = {}
+    for attr in attribute_nodes:
+        col_name = G.nodes[attr]['column_name']
+        if col_name in column_names_freq_dict:
+            column_names_freq_dict[col_name] += 1
+        else:
+            column_names_freq_dict[col_name] = 1
+
+    return column_names_freq_dict
