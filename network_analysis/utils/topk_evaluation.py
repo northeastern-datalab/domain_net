@@ -27,7 +27,10 @@ def calculate_measures(df, num_true_homographs):
         
         precision_list.append(num_homographs_seen_so_far / k)
         recall_list.append(num_homographs_seen_so_far / num_true_homographs)
-        f1_list.append((2*precision_list[-1]*recall_list[-1]) / (precision_list[-1]+recall_list[-1]))
+        if (precision_list[-1]+recall_list[-1]) == 0:
+            f1_list.append(0)
+        else:    
+            f1_list.append((2*precision_list[-1]*recall_list[-1]) / (precision_list[-1]+recall_list[-1]))
 
     df.loc[:, 'precision'] = precision_list
     df.loc[:, 'recall'] = recall_list
@@ -80,7 +83,7 @@ def top_k_graphs(df, output_dir):
 
     # Set-up some matplotlib parameters
     matplotlib.rcParams['figure.figsize'] = (20.0, 12.0)
-    matplotlib.rcParams["axes.grid"] = False
+    matplotlib.rcParams["axes.grid"] = True
     matplotlib.rc('xtick', labelsize=18) 
     matplotlib.rc('ytick', labelsize=18)
 
@@ -89,11 +92,13 @@ def top_k_graphs(df, output_dir):
     plt.axvline(x=num_true_homographs, color='black', linestyle='--')
     plt.text(num_true_homographs,0.90,'Number of true homographs cut-off line', fontsize=20)
     fig.savefig(figures_dir+'topk_full.pdf', bbox_inches='tight')
+    fig.savefig(figures_dir+'topk_full.svg', bbox_inches='tight')
     plt.clf()
 
     # Draw the top-k graph up to k=num_true_homographs
     fig = topk_line_chart(df.head(num_true_homographs))
     fig.savefig(figures_dir+'topk_up_to_real_homographs_k.pdf', bbox_inches='tight')
+    fig.savefig(figures_dir+'topk_up_to_real_homographs_k.svg', bbox_inches='tight')
 
 
 def calculate_eval_measures_from_gt_column(df, measure, gt_column_name, num_true_homographs):

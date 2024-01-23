@@ -97,3 +97,15 @@ def get_cell_node_column_names_frequency(G, cell_node):
             column_names_freq_dict[col_name] = 1
 
     return column_names_freq_dict
+
+def get_cell_node_file_names(G, cell_node):
+    '''
+    Given a graph `G` and a `cell_node` return the unique filenames from its attribute names (i.e., the table files)
+
+    Note: This function only works for graphs `G` where attribute nodes have a 'column_name' type 
+    '''
+    attribute_nodes = get_attribute_of_instance(G, cell_node)
+    file_names = []
+    for attr in attribute_nodes:
+        file_names.append(attr.split('_')[-1])
+    return list(set(file_names))
