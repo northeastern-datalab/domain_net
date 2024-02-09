@@ -12,3 +12,4 @@ from .graph_collapsing import *
 from .graph_helpers import *
 from .rbo import *
 from .num_meanings import *
+from .kde import *
