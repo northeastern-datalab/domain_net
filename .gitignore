@@ -6,6 +6,9 @@
 # Ignores for DATA
 /DATA/
 
+# Ignores for homograph_types_generation
+/homograph_types_generation/datasets/
+
 # Ignores for network analysis
 network_analysis/figures/
 network_analysis/output/

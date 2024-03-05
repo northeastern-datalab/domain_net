@@ -1,0 +1,98 @@
+{
+    "animal_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "animal_scientific_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "country": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "city": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "country_code": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "state": {
+        "type": "traditional",
+        "subtype": "code"
+    },
+    "state_abbrev": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "plant_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "plant_scientific_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "plant_family": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "company_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "first_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "last_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "ssn": {
+        "type": "symbolic",
+        "subtype": "code" 
+    },
+    "gender": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "credit_card_type": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "credit_card": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "email_address": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "car_make": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "car_model": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "car_model_year": {
+        "type": "symbolic",
+        "subtype": "numeric"
+    },
+    "product_grocery": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "movie_title": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "movie_genre": {
+        "type": "symbolic",
+        "subtype": "code"
+    }
+}
