@@ -94,5 +94,61 @@
     "movie_genre": {
         "type": "symbolic",
         "subtype": "code"
+    },
+    "full_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "username": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "university": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "race": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "row_id": {
+        "type": "symbolic",
+        "subtype": "numeric"
+    },
+    "airport_code": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "continent_code": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "airport_elevation": {
+        "type": "symbolic",
+        "subtype": "numeric"
+    },
+    "airport_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "app_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "slogan": {
+        "type": "symbolic",
+        "subtype": "text"
+    },
+    "cost": {
+        "type": "symbolic",
+        "subtype": "numeric"
+    },
+    "app_version": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "employee_id": {
+        "type": "symbolic",
+        "subtype": "code"
     }
 }
