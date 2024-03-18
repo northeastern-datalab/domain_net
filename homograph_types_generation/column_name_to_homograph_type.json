@@ -20,7 +20,7 @@
         "subtype": "code"
     },
     "state": {
-        "type": "traditional",
+        "type": "symbolic",
         "subtype": "code"
     },
     "state_abbrev": {
@@ -148,6 +148,30 @@
         "subtype": "code"
     },
     "employee_id": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "street_name": {
+        "type": "traditional",
+        "subtype": null
+    },
+    "street_number": {
+        "type": "symbolic",
+        "subtype": "numeric"
+    },
+    "postal_code": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "stock_market": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "stock_symbol": {
+        "type": "symbolic",
+        "subtype": "code"
+    },
+    "currency_code": {
         "type": "symbolic",
         "subtype": "code"
     }
