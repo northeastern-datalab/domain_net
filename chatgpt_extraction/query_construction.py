@@ -49,15 +49,13 @@ def main(args):
                 homograph=hom, sample_size=args.sample_size
             )
             # Save the selected sample_df
-            sample_df.to_csv(args.output_dir+'per_homograph/'+hom+'/'+info_dict['filename'], index=False, header=False)
+            sample_df.to_csv(args.output_dir+'per_homograph/'+hom+'/'+info_dict['column_name']+'_'+info_dict['filename'], index=False, header=False)
         
         # Construct all pairwise queries for this homograph (i.e., all pairs filenames the homograph is present in)
         Path(args.output_dir+'all_pairs/'+hom+'/').mkdir(parents=True, exist_ok=True)
         filenames=os.listdir(args.output_dir+'per_homograph/'+hom+'/')
         filename_pairs=list(itertools.combinations(filenames, 2))
-        if len(filename_pairs)==0:
-            # A homograph appearing in only one table (i.e., it has a different meaning across different columns)
-            filename_pairs=[(filenames[0], filenames[0])]
+        
         for pair in filename_pairs:
             with open(args.output_dir+'per_homograph/'+hom+'/'+pair[0], 'r') as f:
                 file1= f.read()
