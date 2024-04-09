@@ -6,6 +6,11 @@
 # Ignores for DATA
 /DATA/
 
+# Ignores for chatgpt_extraction
+chatgpt_extraction/gpt_queries/
+chatgpt_extraction/gpt_output/
+chatgpt_extraction/readable_clusters/
+
 # Ignores for homograph_types_generation
 /homograph_types_generation/datasets/
 
