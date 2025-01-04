@@ -121,7 +121,7 @@ def get_marked_nodes(df, G, top_perc=10.0, bottom_perc=10.0, marked_unambiguous_
 
     return marked_homographs, marked_unambiguous_values
 
-def process_df(df, G):
+def process_df(df, G, attribute_name='betweenness_centrality'):
     '''
     Processes the input dataframe so that it only contains cell nodes with degree greater than 1.
     The returned dataframe also includes a `dense_rank` column with the nodes ranked by their BC scores
@@ -131,6 +131,9 @@ def process_df(df, G):
         df (pandas dataframe): dataframe with BC for each node in the graph 
 
         G (networkx graph): Input graph corresponding to the dataframe
+
+        attribute_name (str): Name of the attribute used to sort the dataframe,
+        by default `betweenness_centrality` is used 
        
     Returns
     -------
@@ -144,8 +147,8 @@ def process_df(df, G):
     print('There are', len(nodes_with_degree_greater_than_1), 'cell nodes with a degree greater than 1')
 
     # Perform dense ranking on the BC column for all remaining nodes
-    df['dense_rank'] = df['betweenness_centrality'].rank(method='dense', ascending=False)
-    df.sort_values(by='betweenness_centrality', ascending=False, inplace=True)
+    df['dense_rank'] = df[attribute_name].rank(method='dense', ascending=False)
+    df.sort_values(by=attribute_name, ascending=False, inplace=True)
 
     num_unique_ranks = df['dense_rank'].nunique()
     print('There are', num_unique_ranks, 'unique ranks based on BC.')

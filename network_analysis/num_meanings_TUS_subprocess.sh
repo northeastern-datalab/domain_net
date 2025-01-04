@@ -1,5 +1,3 @@
-#!/bin/bash
-
 cd ../table-union-master/
 
 echo 'Running TUS_sem_file.py...'
