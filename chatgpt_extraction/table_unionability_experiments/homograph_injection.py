@@ -20,27 +20,28 @@ def main(args):
         T1=pd.read_csv(args.input_queries_dir+q_table, sep=';')
         T1 = T1.drop(T1.columns[0], axis=1)
 
-        # Select columns for the homographs
-        selected_cols=[]
-        for i in range(args.num_homographs):
-            selected_cols.append(random.sample(T1.columns.to_list(), args.homograph_num_meanings))
-
         ########## Inject The Homographs ##########
+        if args.homograph_num_meanings>=2:
+
+            # Select columns for the homographs
+            selected_cols=[]
+            for i in range(args.num_homographs):
+                selected_cols.append(random.sample(T1.columns.to_list(), args.homograph_num_meanings))
+            
+            # Number of rows to be modified for each homograph (usually one, but can be tweaked)
+            num_rows_per_homograph=2
+            
+            # Ensure we have enough rows in the table for the injected homographs
+            assert(T1.shape[0] >= num_rows_per_homograph*args.num_homographs)
+            
+            row_idx=0
+            for i in range(args.num_homographs):
+                for _ in range(num_rows_per_homograph):
+                    T1[selected_cols[i]] = T1[selected_cols[i]].astype(object)
+                    T1.loc[row_idx, selected_cols[i]]='InjectedHomograph'+str(i)
+                    row_idx+=1
         
-        # Number of rows to be modified for each homograph (usually one, can be tweaked)
-        num_rows_per_homograph=1
-        
-        # Ensure we have enough rows in the table for the injected homographs
-        assert(T1.shape[0] >= num_rows_per_homograph*args.num_homographs)
-        
-        row_idx=0
-        for i in range(args.num_homographs):
-            for _ in range(num_rows_per_homograph):
-                T1[selected_cols[i]] = T1[selected_cols[i]].astype(object)
-                T1.loc[row_idx, selected_cols[i]]='InjectedHomograph'+str(i)
-                row_idx+=1
-        
-        T1.to_csv(args.output_dir+q_table, index=False)  
+        T1.head(40).to_csv(args.output_dir+q_table, index=False)  
     
 
 if __name__ == "__main__":
